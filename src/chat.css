@@ -1,0 +1,398 @@
+html, body {
+    height: 100%;
+    width: 100%;
+}
+body {
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;      /* 保证最小高度为视口高度 */
+    height: 100vh;          /* 让 body 高度等于视口高度 */
+    width: 100vw;           /* 让 body 宽度等于视口宽度 */
+    box-sizing: border-box; /* 防止内边距撑大 */
+    display: flex;
+    flex-direction: column;
+}
+#code-container {
+    display: none !important;
+    position: relative;
+    background: #22272e;
+    border-radius: 0;
+    margin-bottom: 10px;
+    overflow: hidden;
+    min-height: 40px;
+    max-height: 400px;
+    height: 180px;
+    transition: height 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+#code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #161b22;
+    color: #fff;
+    padding: 6px 12px;
+    font-size: 14px;
+}
+#code-resizer {
+    height: 6px;
+    background: #444c56;
+    cursor: ns-resize;
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+}
+#code-toggle {
+    background: #444c56;
+    color: #fff;
+    border: none;
+    border-radius: 0;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+#code {
+   flex: 1;
+    overflow: auto;
+}
+#code pre {
+    white-space: pre;
+    margin: 0;
+}
+#code code {
+    font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 14px;
+}
+#chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2em 1em 1em 1em;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    background: #0d1117; /* Copilot Chat 深色背景 */
+    /* max-width: 700px; */
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    padding-bottom: 150px; /* 让内容不会被输入区遮挡，数值可根据实际输入区高度调整 */
+}
+.bubble {
+    display: inline-block;
+    padding: 0.8em 1.2em;
+    border-radius: 1.5em;
+    max-width: 75%;
+    word-break: break-word;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(80,120,200,0.06);
+    line-height: 1.6;
+    transition: background 0.2s;
+}
+.bubble pre code {
+    background: #23272e;
+    color: #fff;
+    border-radius: 6px;
+    padding: 1em;
+    display: block;
+    font-size: 14px;
+    overflow-x: auto;
+}
+.user {
+    align-self: flex-end;
+    background: linear-gradient(90deg, #6a93ff 0%, #4f7cff 100%);
+    color: #fff;
+    border-bottom-right-radius: 0.5em;
+}
+.bot {
+    align-self: flex-start;
+    background: #fff;
+    color: #333;
+    border: 1px solid #e0e0e0;
+    border-bottom-left-radius: 0.5em;
+}
+#input-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    /* background: var(--input-bg, rgba(34, 39, 46, 0.95));
+    box-shadow: 0 -2px 16px rgba(0,0,0,0.08); */
+    z-index: 10;
+    padding: 0;
+    gap: 0;
+}
+
+#input-box {
+    position: relative;
+    width: 98%;
+    /* max-width: 700px; */
+    min-width: 200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    box-sizing: border-box;
+}
+
+#input-context-bar {
+    position: absolute;
+    top: 24px; /* 适当调整与输入框内容对齐 */
+    left: 20px; /* 与#input的padding-left一致 */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 2;
+    pointer-events: auto;
+}
+
+#add-context {
+    background: var(--input-inner-bg, #23272e);
+    color: var(--input-color, #fff);
+    border: 1px solid #c2bfbf;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+}
+
+#add-context:hover {
+    background: #9ea2a5;
+}
+
+#add-context .clip-icon {
+    margin-right: 4px;
+    vertical-align: middle;
+    display: inline-block;
+}
+
+#input {
+    width: 100%;
+    min-height: 64px;
+    max-height: 120px;
+    resize: none;
+    padding: 2.6em 5.5em 0.9em 1.4em; /* 左侧padding与#input-context-bar的left保持一致 */
+    border: none;
+    border-radius: 1em;
+    font-size: 16px;
+    outline: none;
+    background: var(--input-inner-bg, #23272e);
+    color: var(--input-color, #fff);
+    box-shadow: 0 2px 8px rgba(80,120,200,0.08);
+    transition: border 0.2s, box-shadow 0.2s;
+    line-height: 1.6;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+#input:focus {
+    border: 1.5px solid #6a93ff;
+    background: var(--input-inner-bg-focus, #23272e);
+}
+
+/* 保证 context-bar 不影响输入 */
+#input-context-bar {
+    pointer-events: auto;
+}
+
+#input-actions {
+    position: absolute;
+    right: 10px;
+    bottom: 18px;
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+}
+
+#send, #analyze, #analyze-project {
+    background: none;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    padding: 0;
+}
+
+#send:hover, #analyze:hover, #analyze-project:hover {
+    background: var(--input-btn-hover, #23272e);
+}
+
+#send svg, #analyze svg, #analyze-project svg {
+    display: block;
+}
+
+#send:active, #analyze:active, #analyze-project:active {
+    background: #161b22;
+}
+
+#send.loading svg,
+#analyze.loading svg,
+#analyze-project.loading svg {
+    animation: spin 1s linear infinite;
+    opacity: 0.7;
+}
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
+/* 响应式适配 */
+@media (max-width: 900px) {
+    #input-box {
+        max-width: 100vw;
+    }
+}
+@media (max-width: 600px) {
+    #input-box {
+        max-width: 100vw;
+        min-width: 0;
+    }
+    #input {
+        font-size: 15px;
+        padding-right: 4em;
+    }
+    #input-context-bar {
+        left: 12px;
+    }
+}
+::-webkit-scrollbar {
+    width: 8px;
+    background: #f2f3f8;
+}
+::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 4px;
+}
+a {
+    color: #4f7cff;
+    text-decoration: underline;
+    word-break: break-all;
+}
+.code-block {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 12px 0;
+    font-family: 'Fira Mono', 'Consolas', monospace;
+    overflow-x: auto;
+}
+.explanation {
+    margin-bottom: 8px;
+    font-size: 15px;
+    color: #333;
+}
+.copilot-message {
+    display: flex;
+    align-items: flex-start;
+    margin: 16px 0;
+}
+.copilot-avatar {
+    width: 32px;
+    height: 32px;
+    background: url('https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png') no-repeat center/cover;
+    border-radius: 50%;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+.copilot-bubble {
+    /* background: #22272e;
+    color: #fff;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 15px; */
+    max-width: 100%;
+    /* box-shadow: 0 2px 8px rgba(0,0,0,0.08); */
+    font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+    overflow-x: auto;
+}
+.copilot-bubble pre {
+    background: #161b22;
+    color: #adbac7;
+    border-radius: 6px;
+    padding: 10px;
+    margin: 8px 0;
+    font-size: 14px;
+    overflow-x: auto;
+}
+.copilot-bubble code {
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+}
+body.vscode-dark {
+    --input-bg: rgba(34, 39, 46, 0.95);
+    --input-inner-bg: #23272e;
+    --input-inner-bg-focus: #23272e;
+    --input-color: #fff;
+    --input-btn-hover: #23272e;
+}
+body.vscode-light {
+    --input-bg: #f8fafd;
+    --input-inner-bg: #fff;
+    --input-inner-bg-focus: #f0f4fa;
+    --input-color: #222;
+    --input-btn-hover: #e6eaf0;
+}
+#context-bar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+.icon-loading {
+    display: none;
+}
+button.loading .icon-normal {
+    display: none;
+}
+button.loading .icon-loading {
+    display: inline-block;
+}
+#stop {
+    background: none;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    padding: 0;
+}
+#stop:hover {
+    /* background: #ffebe9; */
+}
+#stop svg {
+    display: block;
+}
+.apply-code-btn {
+    margin-top: 8px;
+    background: #6a93ff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.apply-code-btn:hover {
+    background: #4f7cff;
+}
