@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			if (message.type === 'userInput') {
 				const prompt = message.value;
-				const apiKey = 'sk-a904519cd5414009a5eca5a18ff8264b';
+				const apiKey = '';
 				const url = 'https://api.deepseek.com/chat/completions';
 				const messages = message.messages || [
 					{ role: "system", content: "You are a helpful assistant." },
@@ -131,7 +131,7 @@ export function activate(context: vscode.ExtensionContext) {
 					panel.webview.postMessage({ type: 'apiResult', value: '未检测到代码内容' });
 					return;
 				}
-				const apiKey = 'sk-a904519cd5414009a5eca5a18ff8264b';
+				const apiKey = '';
 				const url = 'https://api.deepseek.com/chat/completions';
 				const body = {
 					model: "deepseek-chat",
@@ -170,7 +170,7 @@ export function activate(context: vscode.ExtensionContext) {
 					panel.webview.postMessage({ type: 'apiResult', value: '未找到可分析的代码文件' });
 					return;
 				}
-				const apiKey = 'sk-a904519cd5414009a5eca5a18ff8264b';
+				const apiKey = '';
 				const url = 'https://api.deepseek.com/chat/completions';
 				const body = {
 					model: "deepseek-chat",
