@@ -30,6 +30,15 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "properties": {
+        "filgpt.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "DeepSeek API Key"
+        }
+      }
     }
   },
   "scripts": {
