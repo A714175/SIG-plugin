@@ -26,8 +26,10 @@ window.onload = function() {
 
 // 发送按钮
 send.onclick = () => {
-    if(isWaiting) return;
-    if(input.value.trim()) {
+    if (isWaiting) {
+        return;
+    }
+    if (input.value.trim()) {
         appendBubble(input.value, 'user');
         messages.push({ role: 'user', content: input.value });
         // 生成唯一 requestId
@@ -122,7 +124,9 @@ window.addEventListener('message', event => {
     }
     if (msg.type === 'apiStreamEnd') {
         // 只处理当前 requestId 的流
-        if (msg.requestId && msg.requestId !== currentRequestId) return;
+        if (msg.requestId && msg.requestId !== currentRequestId) {
+            return;
+        }
         // 先移除流式div
         if (streamingDiv && streamingDiv.parentNode) {
             streamingDiv.parentNode.removeChild(streamingDiv);
@@ -255,7 +259,9 @@ function appendBubble(text, who) {
 // 生成中提示
 function showGenerating() {
     const old = document.getElementById('generating-msg');
-    if (old) old.remove();
+    if (old) {
+        old.remove();
+    }
     const div = document.createElement('div');
     div.id = 'generating-msg';
     div.textContent = '正在生成...';
@@ -268,7 +274,9 @@ function showGenerating() {
 }
 function hideGenerating() {
     const old = document.getElementById('generating-msg');
-    if (old) old.remove();
+    if (old) {
+        old.remove();
+    }
 }
 
 const stopBtn = document.getElementById('stop');
