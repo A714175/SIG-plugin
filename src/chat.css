@@ -396,3 +396,23 @@ button.loading .icon-loading {
 .apply-code-btn:hover {
     background: #4f7cff;
 }
+/* #voice-input {
+    background: none;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    padding: 0;
+}
+#voice-input:hover {
+    
+    background: var(--input-btn-hover, #23272e);
+}
+#voice-input svg {
+    display: block;
+} */

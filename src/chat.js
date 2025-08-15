@@ -13,6 +13,7 @@ const contextFilename = document.getElementById('context-filename');
 
 let messages = [];
 let isWaiting = false;
+let currentRequestId = null;
 let codeCollapsed = false;
 let startY = 0;
 let startHeight = 0;
@@ -29,7 +30,9 @@ send.onclick = () => {
     if(input.value.trim()) {
         appendBubble(input.value, 'user');
         messages.push({ role: 'user', content: input.value });
-        vscode.postMessage({ type: 'userInput', value: input.value, messages });
+        // 生成唯一 requestId
+        currentRequestId = Date.now().toString() + Math.random().toString(36).slice(2);
+        vscode.postMessage({ type: 'userInput', value: input.value, messages, requestId: currentRequestId });
         input.value = '';
         chat.scrollTop = chat.scrollHeight;
         isWaiting = true;
@@ -96,6 +99,8 @@ window.addEventListener('message', event => {
         // ...你自己的上下文逻辑...
     }
     if (msg.type === 'apiStream') {
+        // 只处理当前 requestId 的流
+        if (msg.requestId && msg.requestId !== currentRequestId) return;
         if (!streamingDiv) {
             streamingDiv = document.createElement('div');
             streamingDiv.className = 'bot-streaming'
@@ -116,16 +121,36 @@ window.addEventListener('message', event => {
         chat.scrollTop = chat.scrollHeight;
     }
     if (msg.type === 'apiStreamEnd') {
+        // 只处理当前 requestId 的流
+        if (msg.requestId && msg.requestId !== currentRequestId) return;
         // 先移除流式div
         if (streamingDiv && streamingDiv.parentNode) {
             streamingDiv.parentNode.removeChild(streamingDiv);
         }
         // 用完整内容走你原有 appendBubble 逻辑
         appendBubble(streamingContent, 'bot');
+        // 只有流式完整结束时才记忆 AI回复
+        messages.push({ role: 'assistant', content: streamingContent });
         streamingDiv = null;
         streamingContent = '';
         hideGenerating();
         // ...恢复按钮状态等...
+        isWaiting = false;
+        input.disabled = false;
+        send.disabled = false;
+        send.setAttribute('aria-label', '发送');
+        send.classList.remove('loading');
+        input.focus();
+        analyze.disabled = false;
+        analyze.setAttribute('aria-label', '分析当前代码');
+        analyze.classList.remove('loading');
+        analyzeProject.disabled = false;
+        analyzeProject.setAttribute('aria-label', '分析整个项目');
+        analyzeProject.classList.remove('loading');
+    }
+    if (msg.type === 'stopGenerateAck') {
+        // 停止后也立即恢复输入和按钮状态，允许继续发送新内容
+        hideGenerating();
         isWaiting = false;
         input.disabled = false;
         send.disabled = false;
@@ -250,6 +275,9 @@ const stopBtn = document.getElementById('stop');
 stopBtn.onclick = () => {
     vscode.postMessage({ type: 'stopGenerate' });
     hideGenerating(); // 立即隐藏“正在生成...”提示
+    // 停止生成时不记忆本轮 AI回复
+    streamingDiv = null;
+    streamingContent = '';
     isWaiting = false;
     input.disabled = false;
     send.disabled = false;

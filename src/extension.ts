@@ -77,51 +77,74 @@ export function activate(context: vscode.ExtensionContext) {
 					messages,
 					stream: true // 开启流式
 				};
+				// 新增：流式请求的 AbortController（类型断言）
+				const panelAny = panel as any;
+				// 生成唯一请求ID
+				const requestId = Date.now().toString() + Math.random().toString(36).slice(2);
+				panelAny._filgptCurrentRequestId = requestId;
+				if (panelAny._filgptAbortController) {
+					panelAny._filgptAbortController.abort();
+				}
+				const abortController = new AbortController();
+				panelAny._filgptAbortController = abortController;
+				// 通知前端当前请求ID（如需前端配合可加）
 				try {
+					const fetch = (await import('node-fetch')).default;
 					const res = await fetch(url, {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
 							'Authorization': `Bearer ${apiKey}`
 						},
-						body: JSON.stringify(body)
+						body: JSON.stringify(body),
+						signal: abortController.signal
 					});
-					if (!res.body) throw new Error('No response body');
-					const reader = res.body.getReader();
-					const decoder = new TextDecoder('utf-8');
+					if (!res.body) { throw new Error('No response body'); }
 					let buffer = '';
-					let done = false;
-					while (!done) {
-						const { value, done: doneReading } = await reader.read();
-						done = doneReading;
-						if (value) {
-							buffer += decoder.decode(value, { stream: true });
-							// DeepSeek 返回格式为多行 data: ...\n
-							const lines = buffer.split('\n');
-							buffer = lines.pop() || '';
-							for (const line of lines) {
-								const trimmed = line.trim();
-								if (trimmed.startsWith('data:')) {
-									const jsonStr = trimmed.replace(/^data:\s*/, '');
-									if (jsonStr === '[DONE]') {
-										panel.webview.postMessage({ type: 'apiStreamEnd' });
-										return;
+					for await (const chunk of res.body) {
+						// 只有当前请求ID的流才输出
+						if (panelAny._filgptCurrentRequestId !== requestId) {
+							panelAny._filgptAbortController = null;
+							return;
+						}
+						if (abortController.signal.aborted) {
+							panelAny._filgptAbortController = null;
+							return;
+						}
+						const text = Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : chunk;
+						buffer += text;
+						// DeepSeek 返回格式为多行 data: ...\n
+						const lines = buffer.split('\n');
+						buffer = lines.pop() || '';
+						for (const line of lines) {
+							const trimmed = line.trim();
+							if (trimmed.startsWith('data:')) {
+								const jsonStr = trimmed.replace(/^data:\s*/, '');
+								if (jsonStr === '[DONE]') {
+									panel.webview.postMessage({ type: 'apiStreamEnd' });
+									panelAny._filgptAbortController = null;
+									return;
+								}
+								try {
+									const data = JSON.parse(jsonStr);
+									const delta = data.choices?.[0]?.delta?.content;
+									if (delta) {
+										panel.webview.postMessage({ type: 'apiStream', value: delta });
 									}
-									try {
-										const data = JSON.parse(jsonStr);
-										const delta = data.choices?.[0]?.delta?.content;
-										if (delta) {
-											panel.webview.postMessage({ type: 'apiStream', value: delta });
-										}
-									} catch (e) {
-										// 忽略解析失败
-									}
+								} catch (e) {
+									// 忽略解析失败
 								}
 							}
 						}
 					}
 					panel.webview.postMessage({ type: 'apiStreamEnd' });
+					panelAny._filgptAbortController = null;
 				} catch (err) {
+					if (abortController.signal.aborted) {
+						panel.webview.postMessage({ type: 'apiStreamEnd' });
+						panelAny._filgptAbortController = null;
+						return;
+					}
 					panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
 				}
 			}
@@ -206,7 +229,10 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			if (message.type === 'stopGenerate') {
 				// 如果有正在进行的 API 请求，可以在这里中断（如用 AbortController）
-				// 并通知前端
+				const panelAny = panel as any;
+				if (panelAny._filgptAbortController) {
+					panelAny._filgptAbortController.abort();
+				}
 				panel.webview.postMessage({ type: 'stopGenerateAck' });
 			}
 			if (message.type === 'applyCode') {
