@@ -102,10 +102,12 @@ window.addEventListener('message', event => {
     }
     if (msg.type === 'apiStream') {
         // 只处理当前 requestId 的流
-        if (msg.requestId && msg.requestId !== currentRequestId) return;
+        if (msg.requestId && msg.requestId !== currentRequestId) {
+            return;
+        }
         if (!streamingDiv) {
             streamingDiv = document.createElement('div');
-            streamingDiv.className = 'bot-streaming'
+            streamingDiv.className = 'bot-streaming';
             streamingDiv.style.whiteSpace = 'pre-wrap';
             streamingDiv.style.color = '#fff';
             streamingDiv.style.fontSize = '15px';
