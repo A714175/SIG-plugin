@@ -13,6 +13,7 @@ const analyzeProject = $('analyze-project');
 const addContextBtn = $('add-context');
 const contextFilename = $('context-filename');
 const stopBtn = $('stop');
+let pauseBtn = null;
 
 let messages = [], isWaiting = false, currentRequestId = null;
 let codeCollapsed = false, startY = 0, startHeight = 0;
@@ -30,6 +31,7 @@ send.onclick = () => {
     chat.scrollTop = chat.scrollHeight;
     setWaiting(true);
     showGenerating();
+    showPauseBtn();
 };
 
 input.addEventListener('keydown', e => {
@@ -59,6 +61,36 @@ input.addEventListener('input', function() {
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
+
+function showPauseBtn() {
+    if (pauseBtn) { return; }
+    const inputActions = document.getElementById('input-actions');
+    pauseBtn = document.createElement('button');
+    pauseBtn.id = 'pause';
+    pauseBtn.setAttribute('aria-label', '暂停生成');
+    pauseBtn.setAttribute('title', '暂停生成');
+    pauseBtn.innerHTML = `
+        <svg width="22" height="22" viewBox="0 0 24 24">
+            <rect x="6" y="6" width="3.5" height="12" rx="2" fill="#ffbe2e"/>
+            <rect x="14.5" y="6" width="3.5" height="12" rx="2" fill="#ffbe2e"/>
+        </svg>
+    `;
+    pauseBtn.style.marginRight = '0';
+    pauseBtn.className = stopBtn.className;
+    inputActions.insertBefore(pauseBtn, stopBtn);
+    pauseBtn.onclick = () => {
+        vscode.postMessage({ type: 'pauseGenerate' });
+        pauseBtn.disabled = true;
+        pauseBtn.setAttribute('aria-label', '已暂停');
+    };
+}
+
+function hidePauseBtn() {
+    if (pauseBtn && pauseBtn.parentNode) {
+        pauseBtn.parentNode.removeChild(pauseBtn);
+        pauseBtn = null;
+    }
+}
 codeToggle.onclick = () => {
     codeCollapsed = !codeCollapsed;
     codeDiv.style.display = codeCollapsed ? 'none' : 'block';
@@ -89,6 +121,7 @@ window.addEventListener('message', event => {
     }
     if (msg.type === 'apiResult') {
         hideGenerating();
+        hidePauseBtn();
         appendBubble('DeepSeek API返回结果: ' + msg.value, 'bot');
         messages.push({ role: 'assistant', content: msg.value });
         setWaiting(false);
@@ -119,19 +152,21 @@ window.addEventListener('message', event => {
         chat.scrollTop = chat.scrollHeight;
     }
     if (msg.type === 'apiStreamEnd') {
-    if (msg.requestId && msg.requestId !== currentRequestId) { return; }
-    if (streamingDiv && streamingDiv.parentNode) { streamingDiv.parentNode.removeChild(streamingDiv); }
+        if (msg.requestId && msg.requestId !== currentRequestId) { return; }
+        if (streamingDiv && streamingDiv.parentNode) { streamingDiv.parentNode.removeChild(streamingDiv); }
         appendBubble(streamingContent, 'bot');
         messages.push({ role: 'assistant', content: streamingContent });
         streamingDiv = null;
         streamingContent = '';
         hideGenerating();
+        hidePauseBtn();
         setWaiting(false);
         resetBtn(analyze, '分析当前代码');
         resetBtn(analyzeProject, '分析整个项目');
     }
     if (msg.type === 'stopGenerateAck') {
         hideGenerating();
+        hidePauseBtn();
         setWaiting(false);
         resetBtn(analyze, '分析当前代码');
         resetBtn(analyzeProject, '分析整个项目');

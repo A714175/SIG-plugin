@@ -357,7 +357,7 @@ button.loading .icon-normal {
 button.loading .icon-loading {
     display: inline-block;
 }
-#stop {
+#stop, #pause {
     background: none;
     border: none;
     border-radius: 50%;
@@ -370,10 +370,10 @@ button.loading .icon-loading {
     transition: background 0.2s;
     padding: 0;
 }
-#stop:hover {
+#stop:hover, #pause:hover {
     background: #ffebe9;
 }
-#stop svg {
+#stop svg, #pause svg {
     display: block;
 }
 .apply-code-btn {
