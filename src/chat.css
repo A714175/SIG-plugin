@@ -309,13 +309,7 @@ a {
     flex-shrink: 0;
 }
 .copilot-bubble {
-    /* background: #22272e;
-    color: #fff;
-    border-radius: 8px;
-    padding: 14px;
-    font-size: 15px; */
     max-width: 100%;
-    /* box-shadow: 0 2px 8px rgba(0,0,0,0.08); */
     font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
     overflow-x: auto;
 }

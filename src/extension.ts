@@ -1,258 +1,209 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as path from 'path';
 import * as vscode from 'vscode';
-// 如果你用 Node 18+，可以不用引入 node-fetch
-// import fetch from 'node-fetch'; // Use dynamic import below instead
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "filgpt" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const helloDisposable = vscode.commands.registerCommand('filgpt.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from FILGPT!');
-	});
-	context.subscriptions.push(helloDisposable);
-
-	const chatDisposable = vscode.commands.registerCommand('filgpt.openChat', () => {
-		const editor = vscode.window.activeTextEditor;
-		let cachedCode = editor ? editor.document.getText() : '';
-
-		const panel = vscode.window.createWebviewPanel(
-			'filgptChat',
-			'SIG plugin',
-			vscode.ViewColumn.Beside,
-			{
-				enableScripts: true,
-				retainContextWhenHidden: true
-			}
-		);
-
-		panel.webview.html = getChatWebviewContent(context, panel.webview);
-
-		// 监听编辑器切换和选区变化，主动发送当前文件名
-		const updateContextFilename = () => {
+	context.subscriptions.push(
+		vscode.commands.registerCommand('filgpt.helloWorld', () => {
+			vscode.window.showInformationMessage('Hello World from FILGPT!');
+		})
+	);
+	context.subscriptions.push(
+		vscode.commands.registerCommand('filgpt.openChat', () => {
 			const editor = vscode.window.activeTextEditor;
-			const filename = editor ? path.basename(editor.document.fileName) : '';
-			panel.webview.postMessage({ type: 'contextFilename', value: filename });
-		};
-		const editorChangeDisposable = vscode.window.onDidChangeActiveTextEditor(updateContextFilename);
-		const selectionChangeDisposable = vscode.window.onDidChangeTextEditorSelection(updateContextFilename);
-		context.subscriptions.push(editorChangeDisposable, selectionChangeDisposable);
-
-		// 初始化时也发送一次
-		updateContextFilename();
-
-		// 监听选区变化
-		const selectionDisposable = vscode.window.onDidChangeTextEditorSelection(event => {
-			const code = event.textEditor.document.getText();
-			panel.webview.postMessage({ type: 'code', value: code });
-		});
-		context.subscriptions.push(selectionDisposable);
-
-		panel.webview.onDidReceiveMessage(async message => {
-			if (message.type === 'ready') {
-				panel.webview.postMessage({ type: 'code', value: cachedCode });
-			}
-			if (message.type === 'userInput') {
-				const prompt = message.value;
-				const config = vscode.workspace.getConfiguration('filgpt');
-				const apiKey = config.get<string>('apiKey') || '';
-				const url = 'https://api.deepseek.com/chat/completions';
-				const messages = message.messages || [
-					{ role: "system", content: "You are a helpful assistant." },
-					{ role: "user", content: prompt }
-				];
-				const body = {
-					model: "deepseek-chat",
-					messages,
-					stream: true // 开启流式
-				};
-				// 新增：流式请求的 AbortController（类型断言）
-				const panelAny = panel as any;
-				// 生成唯一请求ID
-				const requestId = Date.now().toString() + Math.random().toString(36).slice(2);
-				panelAny._filgptCurrentRequestId = requestId;
-				if (panelAny._filgptAbortController) {
-					panelAny._filgptAbortController.abort();
-				}
-				const abortController = new AbortController();
-				panelAny._filgptAbortController = abortController;
-				// 通知前端当前请求ID（如需前端配合可加）
-				try {
-					const fetch = (await import('node-fetch')).default;
-					const res = await fetch(url, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'Authorization': `Bearer ${apiKey}`
-						},
-						body: JSON.stringify(body),
-						signal: abortController.signal
-					});
-					if (!res.body) { throw new Error('No response body'); }
-					let buffer = '';
-					for await (const chunk of res.body) {
-						// 只有当前请求ID的流才输出
-						if (panelAny._filgptCurrentRequestId !== requestId) {
-							panelAny._filgptAbortController = null;
-							return;
-						}
-						if (abortController.signal.aborted) {
-							panelAny._filgptAbortController = null;
-							return;
-						}
-						const text = Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : chunk;
-						buffer += text;
-						// DeepSeek 返回格式为多行 data: ...\n
-						const lines = buffer.split('\n');
-						buffer = lines.pop() || '';
-						for (const line of lines) {
-							const trimmed = line.trim();
-							if (trimmed.startsWith('data:')) {
-								const jsonStr = trimmed.replace(/^data:\s*/, '');
-								if (jsonStr === '[DONE]') {
-									panel.webview.postMessage({ type: 'apiStreamEnd' });
-									panelAny._filgptAbortController = null;
-									return;
-								}
-								try {
-									const data = JSON.parse(jsonStr);
-									const delta = data.choices?.[0]?.delta?.content;
-									if (delta) {
-										panel.webview.postMessage({ type: 'apiStream', value: delta });
-									}
-								} catch (e) {
-									// 忽略解析失败
-								}
-							}
-						}
-					}
-					panel.webview.postMessage({ type: 'apiStreamEnd' });
-					panelAny._filgptAbortController = null;
-				} catch (err) {
-					if (abortController.signal.aborted) {
-						panel.webview.postMessage({ type: 'apiStreamEnd' });
-						panelAny._filgptAbortController = null;
-						return;
-					}
-					panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
-				}
-			}
-			if (message.type === 'analyzeCode') {
-				// 用 message.code 替代 cachedCode
-				const codeToAnalyze = message.code || '';
-				if (!codeToAnalyze) {
-					panel.webview.postMessage({ type: 'apiResult', value: '未检测到代码内容' });
-					return;
-				}
-				const config = vscode.workspace.getConfiguration('filgpt');
-				const apiKey = config.get<string>('apiKey') || '';
-				const url = 'https://api.deepseek.com/chat/completions';
-				const body = {
-					model: "deepseek-chat",
-					messages: [
-						{ role: "system", content: "你是一个专业的代码审查助手，请分析用户提供的代码并给出修改建议。" },
-						{ role: "user", content: `请帮我分析以下代码并给出修改建议：\n\n${codeToAnalyze}` }
-					],
-					stream: false
-				};
-				try {
-					const res = await fetch(url, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'Authorization': `Bearer ${apiKey}`
-						},
-						body: JSON.stringify(body)
-					});
-					const data = await res.json() as any;
-					const answer = data.choices?.[0]?.message?.content || '未获取到分析建议';
-					panel.webview.postMessage({ type: 'apiResult', value: answer });
-				} catch (err) {
-					panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
-				}
-			}
-			if (message.type === 'analyzeWorkspace') {
-				const files = await vscode.workspace.findFiles('**/*.{js,ts,py,java,cpp,cs,go,rb}', '**/node_modules/**');
-				let allCode = '';
-				for (const file of files) {
-					try {
-						const doc = await vscode.workspace.openTextDocument(file);
-						allCode += `\n\n// 文件: ${path.basename(file.fsPath)}\n${doc.getText()}`;
-					} catch (e) {}
-				}
-				if (!allCode) {
-					panel.webview.postMessage({ type: 'apiResult', value: '未找到可分析的代码文件' });
-					return;
-				}
-				const config = vscode.workspace.getConfiguration('filgpt');
-				const apiKey = config.get<string>('apiKey') || '';
-				const url = 'https://api.deepseek.com/chat/completions';
-				const body = {
-					model: "deepseek-chat",
-					messages: [
-						{ role: "system", content: "你是一个专业的代码审查助手，请分析整个项目的代码并给出修改建议。" },
-						{ role: "user", content: `请分析以下项目代码并给出修改建议：\n\n${allCode}` }
-					],
-					stream: false
-				};
-				try {
-					const res = await fetch(url, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'Authorization': `Bearer ${apiKey}`
-						},
-						body: JSON.stringify(body)
-					});
-					const data = await res.json() as any;
-					const answer = data.choices?.[0]?.message?.content || '未获取到分析建议';
-					panel.webview.postMessage({ type: 'apiResult', value: answer });
-				} catch (err) {
-					panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
-				}
-			}
-			if (message.type === 'addContext') {
+			const cachedCode = editor ? editor.document.getText() : '';
+			const panel = vscode.window.createWebviewPanel(
+				'filgptChat',
+				'SIG plugin',
+				vscode.ViewColumn.Beside,
+				{ enableScripts: true, retainContextWhenHidden: true }
+			);
+			panel.webview.html = getChatWebviewContent(context, panel.webview);
+			// 监听编辑器切换和选区变化，主动发送当前文件名
+			const updateContextFilename = () => {
 				const editor = vscode.window.activeTextEditor;
 				const filename = editor ? path.basename(editor.document.fileName) : '';
 				panel.webview.postMessage({ type: 'contextFilename', value: filename });
-			}
-			if (message.type === 'stopGenerate') {
-				// 如果有正在进行的 API 请求，可以在这里中断（如用 AbortController）
-				const panelAny = panel as any;
-				if (panelAny._filgptAbortController) {
-					panelAny._filgptAbortController.abort();
+			};
+			context.subscriptions.push(
+				vscode.window.onDidChangeActiveTextEditor(updateContextFilename),
+				vscode.window.onDidChangeTextEditorSelection(updateContextFilename)
+			);
+			updateContextFilename();
+			// 监听选区变化
+			context.subscriptions.push(
+				vscode.window.onDidChangeTextEditorSelection(event => {
+					const code = event.textEditor.document.getText();
+					panel.webview.postMessage({ type: 'code', value: code });
+				})
+			);
+			panel.webview.onDidReceiveMessage(async message => {
+				const config = vscode.workspace.getConfiguration('filgpt');
+				const apiKey = config.get<string>('apiKey') || '';
+				const url = 'https://api.deepseek.com/chat/completions';
+				if (message.type === 'ready') {
+					panel.webview.postMessage({ type: 'code', value: cachedCode });
 				}
-				panel.webview.postMessage({ type: 'stopGenerateAck' });
-			}
-			if (message.type === 'applyCode') {
-				const editor = vscode.window.activeTextEditor;
-				if (editor) {
-					editor.edit(editBuilder => {
-						// 你可以选择插入到光标处，也可以覆盖选中区域
-						editBuilder.insert(editor.selection.active, message.value);
-					});
-					vscode.window.showInformationMessage('代码已插入到当前编辑器');
-				} else {
-					vscode.window.showWarningMessage('未找到活动编辑器，无法插入代码');
+				if (message.type === 'userInput') {
+					const messages = message.messages || [
+						{ role: "system", content: "You are a helpful assistant." },
+						{ role: "user", content: message.value }
+					];
+					const body = { model: "deepseek-chat", messages, stream: true };
+					const panelAny = panel as any;
+					const requestId = Date.now().toString() + Math.random().toString(36).slice(2);
+					panelAny._filgptCurrentRequestId = requestId;
+					if (panelAny._filgptAbortController) { panelAny._filgptAbortController.abort(); }
+					const abortController = new AbortController();
+					panelAny._filgptAbortController = abortController;
+					try {
+						const fetch = (await import('node-fetch')).default;
+						const res = await fetch(url, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'Authorization': `Bearer ${apiKey}`
+							},
+							body: JSON.stringify(body),
+							signal: abortController.signal
+						});
+						if (!res.body) { throw new Error('No response body'); }
+						let buffer = '';
+						for await (const chunk of res.body) {
+							if (panelAny._filgptCurrentRequestId !== requestId || abortController.signal.aborted) {
+								panelAny._filgptAbortController = null;
+								return;
+							}
+							const text = Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : chunk;
+							buffer += text;
+							const lines = buffer.split('\n');
+							buffer = lines.pop() || '';
+							for (const line of lines) {
+								const trimmed = line.trim();
+								if (trimmed.startsWith('data:')) {
+									const jsonStr = trimmed.replace(/^data:\s*/, '');
+									if (jsonStr === '[DONE]') {
+										panel.webview.postMessage({ type: 'apiStreamEnd' });
+										panelAny._filgptAbortController = null;
+										return;
+									}
+									try {
+										const data = JSON.parse(jsonStr);
+										const delta = data.choices?.[0]?.delta?.content;
+										if (delta) { panel.webview.postMessage({ type: 'apiStream', value: delta }); }
+									} catch {}
+								}
+							}
+						}
+						panel.webview.postMessage({ type: 'apiStreamEnd' });
+						panelAny._filgptAbortController = null;
+					} catch (err) {
+						if (abortController.signal.aborted) {
+							panel.webview.postMessage({ type: 'apiStreamEnd' });
+							panelAny._filgptAbortController = null;
+							return;
+						}
+						panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
+					}
 				}
-			}
-			if (message.type === 'focusEditor') {
-				vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
-			}
-		});
-	});
-	context.subscriptions.push(chatDisposable);
+				if (message.type === 'analyzeCode') {
+					const codeToAnalyze = message.code || '';
+					if (!codeToAnalyze) {
+						panel.webview.postMessage({ type: 'apiResult', value: '未检测到代码内容' });
+						return;
+					}
+					const body = {
+						model: "deepseek-chat",
+						messages: [
+							{ role: "system", content: "你是一个专业的代码审查助手，请分析用户提供的代码并给出修改建议。" },
+							{ role: "user", content: `请帮我分析以下代码并给出修改建议：\n\n${codeToAnalyze}` }
+						],
+						stream: false
+					};
+					try {
+						const fetch = (await import('node-fetch')).default;
+						const res = await fetch(url, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'Authorization': `Bearer ${apiKey}`
+							},
+							body: JSON.stringify(body)
+						});
+						const data: any = await res.json();
+						const answer = data.choices?.[0]?.message?.content || '未获取到分析建议';
+						panel.webview.postMessage({ type: 'apiResult', value: answer });
+					} catch (err) {
+						panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
+					}
+				}
+				if (message.type === 'analyzeWorkspace') {
+					const files = await vscode.workspace.findFiles('**/*.{js,ts,py,java,cpp,cs,go,rb}', '**/node_modules/**');
+					let allCode = '';
+					for (const file of files) {
+						try {
+							const doc = await vscode.workspace.openTextDocument(file);
+							allCode += `\n\n// 文件: ${path.basename(file.fsPath)}\n${doc.getText()}`;
+						} catch {}
+					}
+					if (!allCode) {
+						panel.webview.postMessage({ type: 'apiResult', value: '未找到可分析的代码文件' });
+						return;
+					}
+					const body = {
+						model: "deepseek-chat",
+						messages: [
+							{ role: "system", content: "你是一个专业的代码审查助手，请分析整个项目的代码并给出修改建议。" },
+							{ role: "user", content: `请分析以下项目代码并给出修改建议：\n\n${allCode}` }
+						],
+						stream: false
+					};
+					try {
+						const fetch = (await import('node-fetch')).default;
+						const res = await fetch(url, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'Authorization': `Bearer ${apiKey}`
+							},
+							body: JSON.stringify(body)
+						});
+						const data: any = await res.json();
+						const answer = data.choices?.[0]?.message?.content || '未获取到分析建议';
+						panel.webview.postMessage({ type: 'apiResult', value: answer });
+					} catch (err) {
+						panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
+					}
+				}
+				if (message.type === 'addContext') {
+					const editor = vscode.window.activeTextEditor;
+					const filename = editor ? path.basename(editor.document.fileName) : '';
+					panel.webview.postMessage({ type: 'contextFilename', value: filename });
+				}
+				if (message.type === 'stopGenerate') {
+					const panelAny = panel as any;
+					if (panelAny._filgptAbortController) { panelAny._filgptAbortController.abort(); }
+					panel.webview.postMessage({ type: 'stopGenerateAck' });
+				}
+				if (message.type === 'applyCode') {
+					const editor = vscode.window.activeTextEditor;
+					if (editor) {
+						editor.edit(editBuilder => {
+							editBuilder.insert(editor.selection.active, message.value);
+						});
+						vscode.window.showInformationMessage('代码已插入到当前编辑器');
+					} else {
+						vscode.window.showWarningMessage('未找到活动编辑器，无法插入代码');
+					}
+				}
+				if (message.type === 'focusEditor') {
+					vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+				}
+			});
+		})
+	);
 }
 
 function getChatWebviewContent(context: vscode.ExtensionContext, webview: vscode.Webview): string {
