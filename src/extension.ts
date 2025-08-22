@@ -47,6 +47,10 @@ export function activate(context: vscode.ExtensionContext) {
 					panel.webview.postMessage({ type: 'code', value: cachedCode });
 				}
 				if (message.type === 'userInput') {
+					if (message.model !== 'deepseek') {
+						panel.webview.postMessage({ type: 'apiResult', value: '当前未选择 DeepSeek，未调用 API。' });
+						return;
+					}
 					const messages = message.messages || [
 						{ role: "system", content: "You are a helpful assistant." },
 						{ role: "user", content: message.value }
@@ -109,6 +113,10 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 				if (message.type === 'analyzeCode') {
+					if (message.model !== 'deepseek') {
+						panel.webview.postMessage({ type: 'apiResult', value: '当前未选择 DeepSeek，未调用 API。' });
+						return;
+					}
 					const codeToAnalyze = message.code || '';
 					if (!codeToAnalyze) {
 						panel.webview.postMessage({ type: 'apiResult', value: '未检测到代码内容' });
@@ -140,6 +148,10 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 				if (message.type === 'analyzeWorkspace') {
+					if (message.model !== 'deepseek') {
+						panel.webview.postMessage({ type: 'apiResult', value: '当前未选择 DeepSeek，未调用 API。' });
+						return;
+					}
 					const files = await vscode.workspace.findFiles('**/*.{js,ts,py,java,cpp,cs,go,rb}', '**/node_modules/**');
 					let allCode = '';
 					for (const file of files) {
