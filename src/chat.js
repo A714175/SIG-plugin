@@ -14,24 +14,14 @@ const addContextBtn = $('add-context');
 const contextFilename = $('context-filename');
 const stopBtn = $('stop');
 let pauseBtn = null;
-
 let messages = [], isWaiting = false, currentRequestId = null;
 let codeCollapsed = false, startY = 0, startHeight = 0;
 let streamingDiv = null, streamingContent = '';
 
 window.onload = () => {
     vscode.postMessage({ type: 'ready' });
-    // 添加模型选择 dropdown
     const inputActions = document.getElementById('input-actions');
     if (inputActions && !document.getElementById('model-select')) {
-        // 创建包裹 dropdown 的 div，方便自定义箭头和布局
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'flex';
-        wrapper.style.alignItems = 'center';
-        wrapper.style.justifyContent = 'flex-start';
-        wrapper.style.position = 'relative';
-        wrapper.style.marginRight = '8px';
-        // dropdown 样式
         const select = document.createElement('select');
         select.id = 'model-select';
         select.setAttribute('aria-label', '选择模型');
@@ -49,7 +39,6 @@ window.onload = () => {
         select.style.webkitAppearance = 'none';
         select.style.MozAppearance = 'none';
         select.style.position = 'relative';
-        // 箭头样式
         const arrow = document.createElement('span');
         arrow.innerHTML = '&#9662;';
         arrow.style.position = 'absolute';
@@ -59,7 +48,6 @@ window.onload = () => {
         arrow.style.pointerEvents = 'none';
         arrow.style.color = '#aaa';
         arrow.style.fontSize = '13px';
-        // 选项
         const filgpt = document.createElement('option');
         filgpt.value = 'filgpt';
         filgpt.textContent = 'filgpt';
@@ -68,11 +56,17 @@ window.onload = () => {
         deepseek.textContent = 'deepseek';
         select.appendChild(filgpt);
         select.appendChild(deepseek);
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.justifyContent = 'flex-start';
+        wrapper.style.position = 'relative';
+        wrapper.style.marginRight = '8px';
         wrapper.appendChild(select);
         wrapper.appendChild(arrow);
         inputActions.insertBefore(wrapper, inputActions.firstChild);
     }
-}
+};
 
 send.onclick = () => {
     if (isWaiting || !input.value.trim()) { return; }
@@ -96,11 +90,15 @@ input.addEventListener('keydown', e => {
 
 analyze.onclick = () => {
     setBtnLoading(analyze, true, '分析中...');
-    vscode.postMessage({ type: 'analyzeCode', code: codeDiv.innerText || '' });
+    const modelSelect = document.getElementById('model-select');
+    const model = modelSelect ? modelSelect.value : 'filgpt';
+    vscode.postMessage({ type: 'analyzeCode', code: codeDiv.innerText || '', model });
 };
 analyzeProject.onclick = () => {
     setBtnLoading(analyzeProject, true, '分析中...');
-    vscode.postMessage({ type: 'analyzeWorkspace' });
+    const modelSelect = document.getElementById('model-select');
+    const model = modelSelect ? modelSelect.value : 'filgpt';
+    vscode.postMessage({ type: 'analyzeWorkspace', model });
 };
 addContextBtn.onclick = () => vscode.postMessage({ type: 'addContext' });
 
@@ -241,6 +239,13 @@ function setBtnLoading(btn, loading, label) {
     btn.disabled = loading;
     btn.setAttribute('aria-label', label);
     btn.classList.toggle('loading', loading);
+    // 只显示 loading icon
+    const iconNormal = btn.querySelector('.icon-normal');
+    const iconLoading = btn.querySelector('.icon-loading');
+    if (iconNormal && iconLoading) {
+        iconNormal.style.display = loading ? 'none' : 'inline-block';
+        iconLoading.style.display = loading ? 'inline-block' : 'none';
+    }
 }
 function resetBtn(btn, label) {
     setBtnLoading(btn, false, label);

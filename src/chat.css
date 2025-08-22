@@ -356,6 +356,7 @@ button.loading .icon-normal {
 }
 button.loading .icon-loading {
     display: inline-block;
+    animation: spin 1s linear infinite;
 }
 #stop, #pause {
     background: none;
