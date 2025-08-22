@@ -14,6 +14,8 @@ const addContextBtn = $('add-context');
 const contextFilename = $('context-filename');
 const stopBtn = $('stop');
 let pauseBtn = null;
+let isPaused = false;
+let pausedStreamBuffer = '';
 let messages = [], isWaiting = false, currentRequestId = null;
 let codeCollapsed = false, startY = 0, startHeight = 0;
 let streamingDiv = null, streamingContent = '';
@@ -121,28 +123,59 @@ function showPauseBtn() {
     const inputActions = document.getElementById('input-actions');
     pauseBtn = document.createElement('button');
     pauseBtn.id = 'pause';
-    pauseBtn.setAttribute('aria-label', '暂停生成');
-    pauseBtn.setAttribute('title', '暂停生成');
-    pauseBtn.innerHTML = `
-        <svg width="22" height="22" viewBox="0 0 24 24">
-            <rect x="6" y="6" width="3.5" height="12" rx="2" fill="#ffbe2e"/>
-            <rect x="14.5" y="6" width="3.5" height="12" rx="2" fill="#ffbe2e"/>
-        </svg>
-    `;
     pauseBtn.style.marginRight = '0';
     pauseBtn.className = stopBtn.className;
     inputActions.insertBefore(pauseBtn, stopBtn);
-    pauseBtn.onclick = () => {
-        vscode.postMessage({ type: 'pauseGenerate' });
-        pauseBtn.disabled = true;
-        pauseBtn.setAttribute('aria-label', '已暂停');
-    };
+    setPauseBtnState('pause');
+}
+
+function setPauseBtnState(state) {
+    if (!pauseBtn) { return; }
+    if (state === 'pause') {
+        pauseBtn.setAttribute('aria-label', '暂停生成');
+        pauseBtn.setAttribute('title', '暂停生成');
+        pauseBtn.innerHTML = `
+            <svg width="22" height="22" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="3.5" height="12" rx="2" fill="#ffbe2e"/>
+                <rect x="14.5" y="6" width="3.5" height="12" rx="2" fill="#ffbe2e"/>
+            </svg>
+        `;
+        pauseBtn.onclick = () => {
+            isPaused = true;
+            setPauseBtnState('resume');
+        };
+    } else if (state === 'resume') {
+        pauseBtn.setAttribute('aria-label', '继续生成');
+        pauseBtn.setAttribute('title', '继续生成');
+        pauseBtn.innerHTML = `
+            <svg width="22" height="22" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" fill="#ffbe2e"/>
+                <path d="M8 12l4 4 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+        `;
+        pauseBtn.onclick = () => {
+            isPaused = false;
+            // 恢复输出暂停期间的内容
+            if (streamingDiv && pausedStreamBuffer) {
+                if (typeof marked !== 'undefined') {
+                    streamingDiv.innerHTML = (marked.parse ? marked.parse(streamingContent + pausedStreamBuffer) : marked(streamingContent + pausedStreamBuffer));
+                } else {
+                    streamingDiv.textContent = streamingContent + pausedStreamBuffer;
+                }
+                streamingContent += pausedStreamBuffer;
+                pausedStreamBuffer = '';
+            }
+            setPauseBtnState('pause');
+        };
+    }
 }
 
 function hidePauseBtn() {
     if (pauseBtn && pauseBtn.parentNode) {
         pauseBtn.parentNode.removeChild(pauseBtn);
         pauseBtn = null;
+        isPaused = false;
+        pausedStreamBuffer = '';
     }
 }
 codeToggle.onclick = () => {
@@ -186,7 +219,7 @@ window.addEventListener('message', event => {
         contextFilename.textContent = msg.value || '';
     }
     if (msg.type === 'apiStream') {
-    if (msg.requestId && msg.requestId !== currentRequestId) { return; }
+        if (msg.requestId && msg.requestId !== currentRequestId) { return; }
         if (!streamingDiv) {
             streamingDiv = document.createElement('div');
             streamingDiv.className = 'bot-streaming';
@@ -197,13 +230,17 @@ window.addEventListener('message', event => {
             streamingContent = '';
             chat.appendChild(streamingDiv);
         }
-        streamingContent += msg.value;
-        if (typeof marked !== 'undefined') {
-            streamingDiv.innerHTML = (marked.parse ? marked.parse(streamingContent) : marked(streamingContent));
+        if (isPaused) {
+            pausedStreamBuffer += msg.value;
         } else {
-            streamingDiv.textContent = streamingContent;
+            streamingContent += msg.value;
+            if (typeof marked !== 'undefined') {
+                streamingDiv.innerHTML = (marked.parse ? marked.parse(streamingContent) : marked(streamingContent));
+            } else {
+                streamingDiv.textContent = streamingContent;
+            }
+            chat.scrollTop = chat.scrollHeight;
         }
-        chat.scrollTop = chat.scrollHeight;
     }
     if (msg.type === 'apiStreamEnd') {
         if (msg.requestId && msg.requestId !== currentRequestId) { return; }
