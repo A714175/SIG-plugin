@@ -46,69 +46,85 @@ export function activate(context: vscode.ExtensionContext) {
 					panel.webview.postMessage({ type: 'code', value: cachedCode });
 				}
 				if (message.type === 'userInput') {
-					if (message.model !== 'deepseek') {
-						panel.webview.postMessage({ type: 'apiResult', value: '当前未选择 DeepSeek，未调用 API。' });
-						return;
-					}
-					const messages = message.messages || [
-						{ role: "system", content: "You are a helpful assistant." },
-						{ role: "user", content: message.value }
-					];
-					const body = { model: "deepseek-chat", messages, stream: true };
-					const panelAny = panel as any;
-					const requestId = Date.now().toString() + Math.random().toString(36).slice(2);
-					panelAny._filgptCurrentRequestId = requestId;
-					if (panelAny._filgptAbortController) { panelAny._filgptAbortController.abort(); }
-					const abortController = new AbortController();
-					panelAny._filgptAbortController = abortController;
-					try {
-						const fetch = (await import('node-fetch')).default;
-						const res = await fetch(url, {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-								'Authorization': `Bearer ${apiKey}`
-							},
-							body: JSON.stringify(body),
-							signal: abortController.signal
-						});
-						if (!res.body) { throw new Error('No response body'); }
-						let buffer = '';
-						for await (const chunk of res.body) {
-							if (panelAny._filgptCurrentRequestId !== requestId || abortController.signal.aborted) {
+					if (message.model === 'deepseek') {
+						const messages = message.messages || [
+							{ role: "system", content: "You are a helpful assistant." },
+							{ role: "user", content: message.value }
+						];
+						const body = { model: "deepseek-chat", messages, stream: true };
+						const panelAny = panel as any;
+						const requestId = Date.now().toString() + Math.random().toString(36).slice(2);
+						panelAny._filgptCurrentRequestId = requestId;
+						if (panelAny._filgptAbortController) { panelAny._filgptAbortController.abort(); }
+						const abortController = new AbortController();
+						panelAny._filgptAbortController = abortController;
+						try {
+							const fetch = (await import('node-fetch')).default;
+							const res = await fetch(url, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'Authorization': `Bearer ${apiKey}`
+								},
+								body: JSON.stringify(body),
+								signal: abortController.signal
+							});
+							if (!res.body) { throw new Error('No response body'); }
+							let buffer = '';
+							for await (const chunk of res.body) {
+								if (panelAny._filgptCurrentRequestId !== requestId || abortController.signal.aborted) {
+									panelAny._filgptAbortController = null;
+									return;
+								}
+								const text = Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : chunk;
+								buffer += text;
+								const lines = buffer.split('\n');
+								buffer = lines.pop() || '';
+								for (const line of lines) {
+									const trimmed = line.trim();
+									if (trimmed.startsWith('data:')) {
+										const jsonStr = trimmed.replace(/^data:\s*/, '');
+										if (jsonStr === '[DONE]') {
+											panel.webview.postMessage({ type: 'apiStreamEnd' });
+											panelAny._filgptAbortController = null;
+											return;
+										}
+										try {
+											const data = JSON.parse(jsonStr);
+											const delta = data.choices?.[0]?.delta?.content;
+											if (delta) { panel.webview.postMessage({ type: 'apiStream', value: delta }); }
+										} catch {}
+									}
+								}
+							}
+							panel.webview.postMessage({ type: 'apiStreamEnd' });
+							panelAny._filgptAbortController = null;
+						} catch (err) {
+							if (abortController.signal.aborted) {
+								panel.webview.postMessage({ type: 'apiStreamEnd' });
 								panelAny._filgptAbortController = null;
 								return;
 							}
-							const text = Buffer.isBuffer(chunk) ? chunk.toString('utf-8') : chunk;
-							buffer += text;
-							const lines = buffer.split('\n');
-							buffer = lines.pop() || '';
-							for (const line of lines) {
-								const trimmed = line.trim();
-								if (trimmed.startsWith('data:')) {
-									const jsonStr = trimmed.replace(/^data:\s*/, '');
-									if (jsonStr === '[DONE]') {
-										panel.webview.postMessage({ type: 'apiStreamEnd' });
-										panelAny._filgptAbortController = null;
-										return;
-									}
-									try {
-										const data = JSON.parse(jsonStr);
-										const delta = data.choices?.[0]?.delta?.content;
-										if (delta) { panel.webview.postMessage({ type: 'apiStream', value: delta }); }
-									} catch {}
-								}
-							}
+							panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
 						}
-						panel.webview.postMessage({ type: 'apiStreamEnd' });
-						panelAny._filgptAbortController = null;
-					} catch (err) {
-						if (abortController.signal.aborted) {
-							panel.webview.postMessage({ type: 'apiStreamEnd' });
-							panelAny._filgptAbortController = null;
-							return;
+					} else if (message.model === 'filgpt') {
+						try {
+							const fetch = (await import('node-fetch')).default;
+							const res = await fetch('http://localhost:8080/generatenew', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json'
+								},
+								body: JSON.stringify({ userInput: message.value })
+							});
+							const data: any = await res.json();
+							let result = '';
+							if (data.text) { result += data.text + '\n\n'; }
+							if (data.code) { result += '```\n' + data.code + '\n```'; }
+							panel.webview.postMessage({ type: 'apiResult', value: result });
+						} catch (err) {
+							panel.webview.postMessage({ type: 'apiResult', value: 'FILGPT接口请求失败: ' + err });
 						}
-						panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
 					}
 				}
 				if (message.type === 'analyzeCode') {
