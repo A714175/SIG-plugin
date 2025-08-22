@@ -149,8 +149,7 @@ function setPauseBtnState(state) {
         pauseBtn.setAttribute('title', '继续生成');
         pauseBtn.innerHTML = `
             <svg width="22" height="22" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" fill="#ffbe2e"/>
-                <path d="M8 12l4 4 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                <path fill="#ffbe2e" d="M2 21l21-9-21-9v7l15 2-15 2z"/>
             </svg>
         `;
         pauseBtn.onclick = () => {
