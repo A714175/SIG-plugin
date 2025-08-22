@@ -19,14 +19,70 @@ let messages = [], isWaiting = false, currentRequestId = null;
 let codeCollapsed = false, startY = 0, startHeight = 0;
 let streamingDiv = null, streamingContent = '';
 
-window.onload = () => vscode.postMessage({ type: 'ready' });
+window.onload = () => {
+    vscode.postMessage({ type: 'ready' });
+    // 添加模型选择 dropdown
+    const inputActions = document.getElementById('input-actions');
+    if (inputActions && !document.getElementById('model-select')) {
+        // 创建包裹 dropdown 的 div，方便自定义箭头和布局
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.justifyContent = 'flex-start';
+        wrapper.style.position = 'relative';
+        wrapper.style.marginRight = '8px';
+        // dropdown 样式
+        const select = document.createElement('select');
+        select.id = 'model-select';
+        select.setAttribute('aria-label', '选择模型');
+        select.style.border = 'none';
+        select.style.background = 'none';
+        select.style.color = '#fff';
+        select.style.borderRadius = '6px';
+        select.style.padding = '2px 28px 2px 10px';
+        select.style.fontSize = '14px';
+        select.style.height = '32px';
+        select.style.outline = 'none';
+        select.style.cursor = 'pointer';
+        select.style.boxShadow = 'none';
+        select.style.appearance = 'none';
+        select.style.webkitAppearance = 'none';
+        select.style.MozAppearance = 'none';
+        select.style.position = 'relative';
+        // 箭头样式
+        const arrow = document.createElement('span');
+        arrow.innerHTML = '&#9662;';
+        arrow.style.position = 'absolute';
+        arrow.style.right = '10px';
+        arrow.style.top = '50%';
+        arrow.style.transform = 'translateY(-50%)';
+        arrow.style.pointerEvents = 'none';
+        arrow.style.color = '#aaa';
+        arrow.style.fontSize = '13px';
+        // 选项
+        const filgpt = document.createElement('option');
+        filgpt.value = 'filgpt';
+        filgpt.textContent = 'filgpt';
+        const deepseek = document.createElement('option');
+        deepseek.value = 'deepseek';
+        deepseek.textContent = 'deepseek';
+        select.appendChild(filgpt);
+        select.appendChild(deepseek);
+        wrapper.appendChild(select);
+        wrapper.appendChild(arrow);
+        inputActions.insertBefore(wrapper, inputActions.firstChild);
+    }
+}
 
 send.onclick = () => {
     if (isWaiting || !input.value.trim()) { return; }
     appendBubble(input.value, 'user');
     messages.push({ role: 'user', content: input.value });
     currentRequestId = Date.now().toString() + Math.random().toString(36).slice(2);
-    vscode.postMessage({ type: 'userInput', value: input.value, messages, requestId: currentRequestId });
+    // 获取当前模型选择
+    const modelSelect = document.getElementById('model-select');
+    const model = modelSelect ? modelSelect.value : 'filgpt';
+    vscode.postMessage({ type: 'userInput', value: input.value, messages, requestId: currentRequestId, model });
     input.value = '';
     chat.scrollTop = chat.scrollHeight;
     setWaiting(true);
