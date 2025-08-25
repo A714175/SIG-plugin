@@ -208,7 +208,7 @@ window.addEventListener('message', event => {
     if (msg.type === 'apiResult') {
         hideGenerating();
         hidePauseBtn();
-        appendBubble('API返回结果: ' + msg.value, 'bot');
+        appendBubble(msg.value, 'bot');
         messages.push({ role: 'assistant', content: msg.value });
         setWaiting(false);
         resetBtn(analyze, '分析当前代码');
