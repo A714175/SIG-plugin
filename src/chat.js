@@ -215,7 +215,52 @@ window.addEventListener('message', event => {
         resetBtn(analyzeProject, '分析整个项目');
     }
     if (msg.type === 'contextFilename') {
-        contextFilename.textContent = msg.value || '';
+        // 支持数组和字符串
+        let files = Array.isArray(msg.value) ? msg.value : (msg.value ? [msg.value] : []);
+        contextFilename.innerHTML = '';
+        files.forEach((name, idx) => {
+            const tag = document.createElement('span');
+            tag.className = 'context-tag';
+            tag.textContent = name;
+            // x 按钮
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'context-tag-close';
+            closeBtn.innerHTML = '&times;';
+            closeBtn.onclick = function(e) {
+                e.stopPropagation();
+                files.splice(idx, 1);
+                contextFilename.innerHTML = '';
+                files.forEach((n, i) => {
+                    const t = document.createElement('span');
+                    t.className = 'context-tag';
+                    t.textContent = n;
+                    const c = document.createElement('button');
+                    c.className = 'context-tag-close';
+                    c.innerHTML = '&times;';
+                    c.onclick = function(ev) {
+                        ev.stopPropagation();
+                        files.splice(i, 1);
+                        // 递归刷新
+                        contextFilename.innerHTML = '';
+                        files.forEach((nn, ii) => {
+                            const tt = document.createElement('span');
+                            tt.className = 'context-tag';
+                            tt.textContent = nn;
+                            const cc = document.createElement('button');
+                            cc.className = 'context-tag-close';
+                            cc.innerHTML = '&times;';
+                            cc.onclick = c.onclick;
+                            tt.appendChild(cc);
+                            contextFilename.appendChild(tt);
+                        });
+                    };
+                    t.appendChild(c);
+                    contextFilename.appendChild(t);
+                });
+            };
+            tag.appendChild(closeBtn);
+            contextFilename.appendChild(tag);
+        });
     }
     if (msg.type === 'apiStream') {
         if (msg.requestId && msg.requestId !== currentRequestId) { return; }

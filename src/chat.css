@@ -1,3 +1,38 @@
+.context-tag {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    color: #fff;
+    border-radius: 6px;
+    border: 1.5px dashed #c2bfbf;
+    font-size: 12px;
+    padding: 0 8px;
+    margin-right: 4px;
+    margin-left: 0;
+    height: 22px;
+    line-height: 22px;
+    position: relative;
+}
+.context-tag-close {
+    background: none !important;
+    border: none;
+    color: #aaa;
+    font-size: 14px;
+    margin-left: 4px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+.context-tag-close:hover {
+    color: #fff;
+}
 html, body {
     height: 100%;
     width: 100%;
