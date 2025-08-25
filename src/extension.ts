@@ -116,7 +116,7 @@ export function activate(context: vscode.ExtensionContext) {
 					} else if (message.model === 'filgpt') {
 						try {
 							const fetch = (await import('node-fetch')).default;
-							const res = await fetch('http://localhost:8080/generatenew', {
+							const res = await fetch('http://localhost:8080/api/innersource/generate', {
 								method: 'POST',
 								headers: {
 									'Content-Type': 'application/json'
