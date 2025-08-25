@@ -39,6 +39,12 @@ export function activate(context: vscode.ExtensionContext) {
 				})
 			);
 			panel.webview.onDidReceiveMessage(async message => {
+				if (message.type === 'showInfo') {
+					vscode.window.showInformationMessage(message.value);
+				}
+				if (message.type === 'showWarning') {
+					vscode.window.showWarningMessage(message.value);
+				}
 				const config = vscode.workspace.getConfiguration('filgpt');
 				const apiKey = config.get<string>('apiKey') || '';
 				const url = 'https://api.deepseek.com/chat/completions';

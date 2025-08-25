@@ -337,11 +337,29 @@ function appendBubble(text, who) {
             copyBtn.setAttribute('data-code-index', idx);
             copyBtn.style.marginLeft = '8px';
             copyBtn.onclick = function() {
-                vscode.postMessage({ type: 'focusEditor' });
-                setTimeout(() => {
-                    const code = bubble.querySelector('pre code').textContent;
-                    vscode.postMessage({ type: 'applyCode', value: code });
-                }, 100);
+                const code = bubble.querySelector('pre code').textContent;
+                // 尝试使用 Clipboard API 复制到剪贴板
+                if (navigator && navigator.clipboard) {
+                    navigator.clipboard.writeText(code).then(() => {
+                        // 可选：提示复制成功
+                        vscode.postMessage({ type: 'showInfo', value: '代码已复制到剪贴板' });
+                    }).catch(() => {
+                        vscode.postMessage({ type: 'showWarning', value: '复制失败，请手动复制' });
+                    });
+                } else {
+                    // 兼容性处理：创建临时 textarea
+                    const textarea = document.createElement('textarea');
+                    textarea.value = code;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        vscode.postMessage({ type: 'showInfo', value: '代码已复制到剪贴板' });
+                    } catch {
+                        vscode.postMessage({ type: 'showWarning', value: '复制失败，请手动复制' });
+                    }
+                    document.body.removeChild(textarea);
+                }
             };
             bubble.appendChild(copyBtn);
         }
