@@ -96,12 +96,14 @@ analyze.onclick = () => {
     const model = modelSelect ? modelSelect.value : 'filgpt';
     vscode.postMessage({ type: 'analyzeCode', code: codeDiv.innerText || '', model });
 };
+
 analyzeProject.onclick = () => {
     setBtnLoading(analyzeProject, true, '分析中...');
     const modelSelect = document.getElementById('model-select');
     const model = modelSelect ? modelSelect.value : 'filgpt';
     vscode.postMessage({ type: 'analyzeWorkspace', model });
 };
+
 addContextBtn.onclick = () => vscode.postMessage({ type: 'addContext' });
 
 stopBtn.onclick = () => {
@@ -116,7 +118,6 @@ input.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
-
 
 function showPauseBtn() {
     if (pauseBtn) { return; }
@@ -177,6 +178,7 @@ function hidePauseBtn() {
         pausedStreamBuffer = '';
     }
 }
+
 codeToggle.onclick = () => {
     codeCollapsed = !codeCollapsed;
     codeDiv.style.display = codeCollapsed ? 'none' : 'block';
@@ -316,6 +318,7 @@ function setWaiting(waiting) {
     send.classList.toggle('loading', waiting);
     if (!waiting) { input.focus(); }
 }
+
 function setBtnLoading(btn, loading, label) {
     btn.disabled = loading;
     btn.setAttribute('aria-label', label);
@@ -328,6 +331,7 @@ function setBtnLoading(btn, loading, label) {
         iconLoading.style.display = loading ? 'inline-block' : 'none';
     }
 }
+
 function resetBtn(btn, label) {
     setBtnLoading(btn, false, label);
 }
@@ -445,6 +449,7 @@ function showGenerating() {
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
 }
+
 function hideGenerating() {
     const old = $('generating-msg');
     if (old) { old.remove(); }
