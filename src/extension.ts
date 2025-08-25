@@ -1,3 +1,4 @@
+import { userInfo } from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -134,80 +135,136 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 				if (message.type === 'analyzeCode') {
-					if (message.model !== 'deepseek') {
-						panel.webview.postMessage({ type: 'apiResult', value: '当前未选择 DeepSeek，未调用 API。' });
-						return;
-					}
+					const model = message.model || 'filgpt';
 					const codeToAnalyze = message.code || '';
 					if (!codeToAnalyze) {
 						panel.webview.postMessage({ type: 'apiResult', value: '未检测到代码内容' });
 						return;
 					}
-					const body = {
-						model: "deepseek-chat",
-						messages: [
-							{ role: "system", content: "你是一个专业的代码审查助手，请分析用户提供的代码并给出修改建议。" },
-							{ role: "user", content: `请帮我分析以下代码并给出修改建议：\n\n${codeToAnalyze}` }
-						],
-						stream: false
-					};
-					try {
-						const fetch = (await import('node-fetch')).default;
-						const res = await fetch(url, {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-								'Authorization': `Bearer ${apiKey}`
-							},
-							body: JSON.stringify(body)
-						});
-						const data: any = await res.json();
-						const answer = data.choices?.[0]?.message?.content || '未获取到分析建议';
-						panel.webview.postMessage({ type: 'apiResult', value: answer });
-					} catch (err) {
-						panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
+					if (model === 'deepseek') {
+						const body = {
+							model: "deepseek-chat",
+							messages: [
+								{ role: "system", content: "你是一个专业的代码审查助手，请分析用户提供的代码并给出修改建议。" },
+								{ role: "user", content: `请帮我分析以下代码并给出修改建议：\n\n${codeToAnalyze}` }
+							],
+							stream: false
+						};
+						try {
+							const fetch = (await import('node-fetch')).default;
+							const res = await fetch(url, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'Authorization': `Bearer ${apiKey}`
+								},
+								body: JSON.stringify(body)
+							});
+							const data: any = await res.json();
+							const answer = data.choices?.[0]?.message?.content || '未获取到分析建议';
+							panel.webview.postMessage({ type: 'apiResult', value: answer });
+						} catch (err) {
+							panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
+						}
+					} else if (model === 'filgpt') {
+						const body = {
+							userInput: `请帮我分析以下代码并给出修改建议：\n\n${codeToAnalyze}`,
+						};
+						try {
+							const fetch = (await import('node-fetch')).default;
+							const res = await fetch('http://localhost:8080/api/innersource/generate', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json'
+								},
+								body: JSON.stringify({ code: body })
+							});
+							const data: any = await res.json();
+							let result = '';
+							if (data.text) { result += data.text + '\n\n'; }
+							if (data.suggestion) { result += data.suggestion; }
+							panel.webview.postMessage({ type: 'apiResult', value: result || '未获取到分析建议' });
+						} catch (err) {
+							panel.webview.postMessage({ type: 'apiResult', value: 'FILGPT接口请求失败: ' + err });
+						}
+					} else {
+						panel.webview.postMessage({ type: 'apiResult', value: '未选择有效模型' });
 					}
 				}
 				if (message.type === 'analyzeWorkspace') {
-					if (message.model !== 'deepseek') {
-						panel.webview.postMessage({ type: 'apiResult', value: '当前未选择 DeepSeek，未调用 API。' });
-						return;
-					}
-					const files = await vscode.workspace.findFiles('**/*.{js,ts,py,java,cpp,cs,go,rb}', '**/node_modules/**');
-					let allCode = '';
-					for (const file of files) {
+					const model = message.model || 'filgpt';
+					if (model === 'deepseek') {
+						const files = await vscode.workspace.findFiles('**/*.{js,ts,py,java,cpp,cs,go,rb}', '**/node_modules/**');
+						let allCode = '';
+						for (const file of files) {
+							try {
+								const doc = await vscode.workspace.openTextDocument(file);
+								allCode += `\n\n// 文件: ${path.basename(file.fsPath)}\n${doc.getText()}`;
+							} catch {}
+						}
+						if (!allCode) {
+							panel.webview.postMessage({ type: 'apiResult', value: '未找到可分析的代码文件' });
+							return;
+						}
+						const body = {
+							model: "deepseek-chat",
+							messages: [
+								{ role: "system", content: "你是一个专业的代码审查助手，请分析整个项目的代码并给出修改建议。" },
+								{ role: "user", content: `请分析以下项目代码并给出修改建议：\n\n${allCode}` }
+							],
+							stream: false
+						};
 						try {
-							const doc = await vscode.workspace.openTextDocument(file);
-							allCode += `\n\n// 文件: ${path.basename(file.fsPath)}\n${doc.getText()}`;
-						} catch {}
-					}
-					if (!allCode) {
-						panel.webview.postMessage({ type: 'apiResult', value: '未找到可分析的代码文件' });
-						return;
-					}
-					const body = {
-						model: "deepseek-chat",
-						messages: [
-							{ role: "system", content: "你是一个专业的代码审查助手，请分析整个项目的代码并给出修改建议。" },
-							{ role: "user", content: `请分析以下项目代码并给出修改建议：\n\n${allCode}` }
-						],
-						stream: false
-					};
-					try {
-						const fetch = (await import('node-fetch')).default;
-						const res = await fetch(url, {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-								'Authorization': `Bearer ${apiKey}`
-							},
-							body: JSON.stringify(body)
-						});
-						const data: any = await res.json();
-						const answer = data.choices?.[0]?.message?.content || '未获取到分析建议';
-						panel.webview.postMessage({ type: 'apiResult', value: answer });
-					} catch (err) {
-						panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
+							const fetch = (await import('node-fetch')).default;
+							const res = await fetch(url, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'Authorization': `Bearer ${apiKey}`
+								},
+								body: JSON.stringify(body)
+							});
+							const data: any = await res.json();
+							const answer = data.choices?.[0]?.message?.content || '未获取到分析建议';
+							panel.webview.postMessage({ type: 'apiResult', value: answer });
+						} catch (err) {
+							panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
+						}
+					} else if (model === 'filgpt') {
+						const files = await vscode.workspace.findFiles('**/*.{js,ts,py,java,cpp,cs,go,rb}', '**/node_modules/**');
+						let allCode = '';
+						for (const file of files) {
+							try {
+								const doc = await vscode.workspace.openTextDocument(file);
+								allCode += `\n\n// 文件: ${path.basename(file.fsPath)}\n${doc.getText()}`;
+							} catch {}
+						}
+						if (!allCode) {
+							panel.webview.postMessage({ type: 'apiResult', value: '未找到可分析的代码文件' });
+							return;
+						}
+						const body = {
+							userInput: `请分析以下项目代码并给出修改建议：\n\n${allCode}`,
+						};
+						try {
+							const fetch = (await import('node-fetch')).default;
+							const res = await fetch('http://localhost:8080/api/innersource/generate', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json'
+								},
+								body: JSON.stringify({ code: body })
+							});
+							const data: any = await res.json();
+							let result = '';
+							if (data.text) { result += data.text + '\n\n'; }
+							if (data.suggestion) { result += data.suggestion; }
+							panel.webview.postMessage({ type: 'apiResult', value: result || '未获取到分析建议' });
+						} catch (err) {
+							panel.webview.postMessage({ type: 'apiResult', value: 'FILGPT接口请求失败: ' + err });
+						}
+					} else {
+						panel.webview.postMessage({ type: 'apiResult', value: '未选择有效模型' });
 					}
 				}
 				if (message.type === 'addContext') {
