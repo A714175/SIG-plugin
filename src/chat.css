@@ -314,7 +314,7 @@ a {
     overflow-x: auto;
 }
 .copilot-bubble pre {
-    background: #161b22;
+    background: rgb(33, 41, 50);
     color: #adbac7;
     border-radius: 6px;
     padding: 10px;

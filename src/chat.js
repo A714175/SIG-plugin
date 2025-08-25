@@ -301,9 +301,17 @@ function appendBubble(text, who) {
                 let html = '', codeIndex = 0;
                 parts.forEach(part => {
                     if (part.startsWith('```') && part.endsWith('```')) {
-                        const code = part.slice(3, -3);
-                        html += `<div class="copilot-bubble">
-                            <pre><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+                        let codeBlock = part.slice(3, -3);
+                        let lang = '';
+                        const firstLineBreak = codeBlock.indexOf('\n');
+                        if (firstLineBreak !== -1) {
+                            lang = codeBlock.slice(0, firstLineBreak).trim();
+                            codeBlock = codeBlock.slice(firstLineBreak + 1);
+                        }
+                        html += `
+                        <div>${lang}</div>
+                        <div class="copilot-bubble">
+                            <pre><code class="language-${lang}">${codeBlock.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
                             <button class="apply-code-btn" data-code-index="${codeIndex}">copy</button>
                         </div>`;
                         codeIndex++;
