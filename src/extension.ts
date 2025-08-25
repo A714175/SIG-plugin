@@ -228,6 +228,17 @@ export function activate(context: vscode.ExtensionContext) {
 				if (message.type === 'focusEditor') {
 					vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
 				}
+				if (message.type === 'downloadCode') {
+					// 让用户选择保存路径
+					const uri = await vscode.window.showSaveDialog({
+						defaultUri: vscode.Uri.file('code.txt'),
+						filters: { 'Code': ['txt', 'js', 'ts', 'py', 'java', 'cpp'] }
+					});
+					if (uri) {
+						await vscode.workspace.fs.writeFile(uri, Buffer.from(message.value, 'utf8'));
+						vscode.window.showInformationMessage('代码已保存到 ' + uri.fsPath);
+					}
+				}
 			});
 		})
 	);

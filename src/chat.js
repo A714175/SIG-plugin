@@ -312,7 +312,7 @@ function appendBubble(text, who) {
                         <div>${lang}</div>
                         <div class="copilot-bubble">
                             <pre><code class="language-${lang}">${codeBlock.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
-                            <button class="apply-code-btn" data-code-index="${codeIndex}">copy</button>
+
                         </div>`;
                         codeIndex++;
                     } else if (part.trim() !== '') {
@@ -328,14 +328,49 @@ function appendBubble(text, who) {
     }
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
-    div.querySelectorAll('.apply-code-btn').forEach(btn => {
+    // 动态插入 copy 按钮
+    div.querySelectorAll('.copilot-bubble').forEach((bubble, idx) => {
+        if (!bubble.querySelector('.apply-code-btn')) {
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'apply-code-btn';
+            copyBtn.textContent = 'copy';
+            copyBtn.setAttribute('data-code-index', idx);
+            copyBtn.style.marginLeft = '8px';
+            copyBtn.onclick = function() {
+                vscode.postMessage({ type: 'focusEditor' });
+                setTimeout(() => {
+                    const code = bubble.querySelector('pre code').textContent;
+                    vscode.postMessage({ type: 'applyCode', value: code });
+                }, 100);
+            };
+            bubble.appendChild(copyBtn);
+        }
+    });
+    div.querySelectorAll('.download-code-btn').forEach(btn => {
         btn.onclick = function() {
-            vscode.postMessage({ type: 'focusEditor' });
-            setTimeout(() => {
-                const code = this.previousElementSibling.textContent;
-                vscode.postMessage({ type: 'applyCode', value: code });
-            }, 100);
+            const code = this.previousElementSibling.textContent;
+            vscode.postMessage({ type: 'downloadCode', value: code });
         };
+    });
+    // 新增 download 按钮，UI 与 copy 按钮一致
+    div.querySelectorAll('.copilot-bubble').forEach(bubble => {
+        // 检查是否已存在 download 按钮，避免重复添加
+        if (!bubble.querySelector('.download-code-btn')) {
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'download-code-btn';
+            downloadBtn.textContent = 'download';
+            downloadBtn.style.marginLeft = '8px';
+            // 复制 copy 按钮的样式
+            const copyBtn = bubble.querySelector('.apply-code-btn');
+            if (copyBtn) {
+                downloadBtn.style.cssText += copyBtn.style.cssText;
+            }
+            downloadBtn.onclick = function() {
+                const code = bubble.querySelector('pre code').textContent;
+                vscode.postMessage({ type: 'downloadCode', value: code });
+            };
+            bubble.appendChild(downloadBtn);
+        }
     });
 }
 
