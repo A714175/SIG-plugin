@@ -261,9 +261,23 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 				}
 				if (message.type === 'addContext') {
-					const editor = vscode.window.activeTextEditor;
-					const filename = editor ? path.basename(editor.document.fileName) : '';
-					panel.webview.postMessage({ type: 'contextFilename', value: filename });
+					// 获取项目内所有文件
+					const files = await vscode.workspace.findFiles('**/*', '**/node_modules/**');
+					const fileItems = files.map(f => ({
+						label: path.basename(f.fsPath),
+						description: vscode.workspace.asRelativePath(f.fsPath),
+						fsPath: f.fsPath
+					}));
+					const picked = await vscode.window.showQuickPick(fileItems, {
+						placeHolder: '请选择最多5个文件作为上下文',
+						matchOnDescription: true,
+						canPickMany: true
+					});
+					if (picked && picked.length > 0) {
+						// 只展示前5个文件名
+						const names = picked.slice(0, 5).map(item => item.label);
+						panel.webview.postMessage({ type: 'contextFilename', value: names });
+					}
 				}
 				if (message.type === 'stopGenerate') {
 					const panelAny = panel as any;

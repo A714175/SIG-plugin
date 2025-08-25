@@ -143,11 +143,11 @@ body {
 
 #input-context-bar {
     position: absolute;
-    top: 24px; /* 适当调整与输入框内容对齐 */
-    left: 20px; /* 与#input的padding-left一致 */
+    top: 24px;
+    left: 20px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
     z-index: 2;
     pointer-events: auto;
 }
@@ -157,13 +157,14 @@ body {
     color: var(--input-color, #fff);
     border: 1px solid #c2bfbf;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 11px;
     cursor: pointer;
     transition: background 0.2s, border 0.2s;
     height: 28px;
     display: flex;
     align-items: center;
-    padding: 0 12px;
+    padding: 0 10px;
+    min-width: 0;
 }
 
 #add-context:hover {
@@ -171,7 +172,7 @@ body {
 }
 
 #add-context .clip-icon {
-    margin-right: 4px;
+    margin-right: 3px;
     vertical-align: middle;
     display: inline-block;
 }
