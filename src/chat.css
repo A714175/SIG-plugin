@@ -121,7 +121,7 @@ body {
     position: fixed;
     bottom: 0;
     left: 0;
-    width: 100%;
+    width: 98%;
     /* background: var(--input-bg, rgba(34, 39, 46, 0.95));
     box-shadow: 0 -2px 16px rgba(0,0,0,0.08); */
     z-index: 10;
