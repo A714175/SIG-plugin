@@ -217,52 +217,84 @@ window.addEventListener('message', event => {
         resetBtn(analyzeProject, '分析整个项目');
     }
     if (msg.type === 'contextFilename') {
-        // 支持数组和字符串
-        let files = Array.isArray(msg.value) ? msg.value : (msg.value ? [msg.value] : []);
+        // 文件名管理优化：fixedFiles为已固定，currentFile为当前未固定
+    if (!window._fixedFiles) { window._fixedFiles = []; }
+    if (typeof window._currentFile === 'undefined') { window._currentFile = ''; }
+        let fixedFiles = window._fixedFiles;
+        let currentFile = window._currentFile;
+        // 处理新消息
+        if (Array.isArray(msg.value)) {
+            if (msg.value.length > 0) {
+                // 多选时，第一个为currentFile，其余加入fixedFiles
+                let first = msg.value[0];
+                let rest = msg.value.slice(1);
+                // 如果first已固定，则currentFile为空
+                if (fixedFiles.includes(first)) {
+                    currentFile = '';
+                } else {
+                    currentFile = first;
+                }
+                rest.forEach(f => {
+                    if (!fixedFiles.includes(f)) { fixedFiles.push(f); }
+                });
+            } else {
+                currentFile = '';
+            }
+        } else if (typeof msg.value === 'string') {
+            // 单选
+            if (msg.value && !fixedFiles.includes(msg.value)) {
+                currentFile = msg.value;
+            } else {
+                currentFile = '';
+            }
+        }
+        window._currentFile = currentFile;
+        window._fixedFiles = fixedFiles;
+        // 渲染
         contextFilename.innerHTML = '';
-        files.forEach((name, idx) => {
+        // 固定文件名（非斜体，x号）
+        fixedFiles.forEach((name, idx) => {
             const tag = document.createElement('span');
             tag.className = 'context-tag';
             tag.textContent = name;
+            tag.style.fontStyle = 'normal';
             // x 按钮
             const closeBtn = document.createElement('button');
             closeBtn.className = 'context-tag-close';
             closeBtn.innerHTML = '&times;';
             closeBtn.onclick = function(e) {
                 e.stopPropagation();
-                files.splice(idx, 1);
-                contextFilename.innerHTML = '';
-                files.forEach((n, i) => {
-                    const t = document.createElement('span');
-                    t.className = 'context-tag';
-                    t.textContent = n;
-                    const c = document.createElement('button');
-                    c.className = 'context-tag-close';
-                    c.innerHTML = '&times;';
-                    c.onclick = function(ev) {
-                        ev.stopPropagation();
-                        files.splice(i, 1);
-                        // 递归刷新
-                        contextFilename.innerHTML = '';
-                        files.forEach((nn, ii) => {
-                            const tt = document.createElement('span');
-                            tt.className = 'context-tag';
-                            tt.textContent = nn;
-                            const cc = document.createElement('button');
-                            cc.className = 'context-tag-close';
-                            cc.innerHTML = '&times;';
-                            cc.onclick = c.onclick;
-                            tt.appendChild(cc);
-                            contextFilename.appendChild(tt);
-                        });
-                    };
-                    t.appendChild(c);
-                    contextFilename.appendChild(t);
-                });
+                fixedFiles.splice(idx, 1);
+                window._fixedFiles = fixedFiles;
+                // 如果当前currentFile为空，则尝试恢复为最后一个被删除的文件名（可选优化，实际可不恢复）
+                // window._currentFile = '';
+                // 重新渲染
+                window.dispatchEvent(new MessageEvent('message', { data: { type: 'contextFilename', value: window._currentFile || '' } }));
             };
             tag.appendChild(closeBtn);
             contextFilename.appendChild(tag);
         });
+        // 当前未固定文件名（斜体，+号）
+        if (currentFile) {
+            const tag = document.createElement('span');
+            tag.className = 'context-tag';
+            tag.textContent = currentFile;
+            tag.style.fontStyle = 'italic';
+            // + 按钮
+            const plusBtn = document.createElement('button');
+            plusBtn.className = 'context-tag-close';
+            plusBtn.innerHTML = '+';
+            plusBtn.onclick = function(e) {
+                e.stopPropagation();
+                if (!fixedFiles.includes(currentFile)) { fixedFiles.push(currentFile); }
+                window._fixedFiles = fixedFiles;
+                window._currentFile = '';
+                // 重新渲染
+                window.dispatchEvent(new MessageEvent('message', { data: { type: 'contextFilename', value: '' } }));
+            };
+            tag.appendChild(plusBtn);
+            contextFilename.appendChild(tag);
+        }
     }
     if (msg.type === 'apiStream') {
         if (msg.requestId && msg.requestId !== currentRequestId) { return; }
