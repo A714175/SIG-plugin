@@ -364,12 +364,7 @@ function appendBubble(text, who) {
             bubble.appendChild(copyBtn);
         }
     });
-    div.querySelectorAll('.download-code-btn').forEach(btn => {
-        btn.onclick = function() {
-            const code = this.previousElementSibling.textContent;
-            vscode.postMessage({ type: 'downloadCode', value: code });
-        };
-    });
+    // 已在动态插入 download 按钮时绑定事件，无需重复绑定
     // 新增 download 按钮，UI 与 copy 按钮一致
     div.querySelectorAll('.copilot-bubble').forEach(bubble => {
         // 检查是否已存在 download 按钮，避免重复添加

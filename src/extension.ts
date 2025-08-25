@@ -1,4 +1,3 @@
-import { userInfo } from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -167,9 +166,6 @@ export function activate(context: vscode.ExtensionContext) {
 							panel.webview.postMessage({ type: 'apiResult', value: 'DeepSeek接口请求失败: ' + err });
 						}
 					} else if (model === 'filgpt') {
-						const body = {
-							userInput: `请帮我分析以下代码并给出修改建议：\n\n${codeToAnalyze}`,
-						};
 						try {
 							const fetch = (await import('node-fetch')).default;
 							const res = await fetch('http://localhost:8080/api/innersource/generate', {
@@ -177,7 +173,7 @@ export function activate(context: vscode.ExtensionContext) {
 								headers: {
 									'Content-Type': 'application/json'
 								},
-								body: JSON.stringify({ code: body })
+								body: JSON.stringify({ userInput: `请帮我分析以下代码并给出修改建议：\n\n${codeToAnalyze}` })
 							});
 							const data: any = await res.json();
 							let result = '';
@@ -243,9 +239,6 @@ export function activate(context: vscode.ExtensionContext) {
 							panel.webview.postMessage({ type: 'apiResult', value: '未找到可分析的代码文件' });
 							return;
 						}
-						const body = {
-							userInput: `请分析以下项目代码并给出修改建议：\n\n${allCode}`,
-						};
 						try {
 							const fetch = (await import('node-fetch')).default;
 							const res = await fetch('http://localhost:8080/api/innersource/generate', {
@@ -253,7 +246,7 @@ export function activate(context: vscode.ExtensionContext) {
 								headers: {
 									'Content-Type': 'application/json'
 								},
-								body: JSON.stringify({ code: body })
+								body: JSON.stringify({ userInput: `请分析以下项目代码并给出修改建议：\n\n${allCode}` })
 							});
 							const data: any = await res.json();
 							let result = '';
