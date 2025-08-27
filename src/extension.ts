@@ -123,12 +123,21 @@ export function activate(context: vscode.ExtensionContext) {
 					} else if (message.model === 'filgpt') {
 						try {
 							const fetch = (await import('node-fetch')).default;
+							// 合并上下文文件内容-start
+							const contextFiles = (panel as any)._filgptContextFiles || [];
+							let userInput = message.value;
+							if (contextFiles.length > 0) {
+								const contextText = contextFiles.map((f: { name: any; content: any; }) => `文件: ${f.name}\n${f.content}`).join('\n\n');
+								userInput += `\n\n以下是选中的文件内容：\n${contextText}`;
+							}
+							// 合并上下文文件内容-end
 							const res = await fetch('http://localhost:8080/api/innersource/generate', {
 								method: 'POST',
 								headers: {
 									'Content-Type': 'application/json'
 								},
-								body: JSON.stringify({ userInput: message.value })
+								// body: JSON.stringify({ userInput: message.value })
+								body: JSON.stringify({ userInput })
 							});
 							const data: any = await res.json();
 							let result = '';
