@@ -1,4 +1,3 @@
-
 const $ = id => document.getElementById(id);
 const vscode = acquireVsCodeApi();
 const codeContainer = $('code-container');
@@ -266,6 +265,7 @@ window.addEventListener('message', event => {
                 e.stopPropagation();
                 fixedFiles.splice(idx, 1);
                 window._fixedFiles = fixedFiles;
+                vscode.postMessage({ type: 'removeContextFile', value: name }); // 新增这一行
                 // 如果当前currentFile为空，则尝试恢复为最后一个被删除的文件名（可选优化，实际可不恢复）
                 // window._currentFile = '';
                 // 重新渲染

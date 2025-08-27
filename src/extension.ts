@@ -327,6 +327,11 @@ export function activate(context: vscode.ExtensionContext) {
 						vscode.window.showInformationMessage('代码已保存到 ' + uri.fsPath);
 					}
 				}
+				if (message.type === 'removeContextFile') {
+					const contextFiles = (panel as any)._filgptContextFiles || [];
+					// 支持按文件名或路径移除
+					(panel as any)._filgptContextFiles = contextFiles.filter((f: { name: any; path: any; }) => f.name !== message.value && f.path !== message.value);
+				}
 			});
 		})
 	);
