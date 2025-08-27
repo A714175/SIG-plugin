@@ -1,6 +1,6 @@
-# filgpt README
+# SIG cost-saving README
 
-This is the README for your extension "filgpt". After writing up a brief description, we recommend including the following sections.
+version 1.0.0
 
 ## Features
 

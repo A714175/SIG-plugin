@@ -3,6 +3,7 @@
   "displayName": "FILGPT",
   "description": "",
   "version": "0.0.1",
+  "publisher": "kimfortest",
   "engines": {
     "vscode": "^1.102.0"
   },
@@ -62,5 +63,13 @@
   },
   "dependencies": {
     "node-fetch": "^3.3.2"
-  }
+  },
+  "files": [
+    "src",
+    "out",
+    "images",
+    "README.md",
+    "CHANGELOG.md",
+    "package.json"
+  ]
 }
