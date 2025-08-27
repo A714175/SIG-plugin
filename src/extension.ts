@@ -57,6 +57,13 @@ export function activate(context: vscode.ExtensionContext) {
 							{ role: "system", content: "You are a helpful assistant." },
 							{ role: "user", content: message.value }
 						];
+						// `以下是选中的文件内容：\n${contextText}`
+						// 合并上下文文件内容
+						const contextFiles = (panel as any)._filgptContextFiles || [];
+						if (contextFiles.length > 0) {
+							const contextText = contextFiles.map((f: { name: string; content: string }) => `文件: ${f.name}\n${f.content}`).join('\n\n');
+							messages.push({ role: "system", content: `以下是选中的文件内容：\n${contextText}` });
+						}
 						const body = { model: "deepseek-chat", messages, stream: true };
 						const panelAny = panel as any;
 						const requestId = Date.now().toString() + Math.random().toString(36).slice(2);
@@ -274,8 +281,19 @@ export function activate(context: vscode.ExtensionContext) {
 						canPickMany: true
 					});
 					if (picked && picked.length > 0) {
+						// 读取选中文件内容
+						const contextFiles = [];
+						for (const item of picked.slice(0, 5)) {
+							try {
+								const doc = await vscode.workspace.openTextDocument(item.fsPath);
+								contextFiles.push({ name: item.label, path: item.fsPath, content: doc.getText() });
+							} catch {}
+						}
+						// 保存到panel对象，后续发送时用
+						(panel as any)._filgptContextFiles = contextFiles;
 						// 只展示前5个文件名
-						const names = picked.slice(0, 5).map(item => item.label);
+						// const names = picked.slice(0, 5).map(item => item.label);
+						const names = contextFiles.map(item => item.name);
 						panel.webview.postMessage({ type: 'contextFilename', value: names });
 					}
 				}
