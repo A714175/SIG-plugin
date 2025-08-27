@@ -261,14 +261,22 @@ window.addEventListener('message', event => {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'context-tag-close';
             closeBtn.innerHTML = '&times;';
+            closeBtn.style.width = '22px';
+            closeBtn.style.height = '22px';
+            closeBtn.style.fontSize = '18px';
+            closeBtn.style.lineHeight = '22px';
+            closeBtn.style.border = 'none';
+            closeBtn.style.background = 'transparent';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.display = 'inline-flex';
+            closeBtn.style.alignItems = 'center';
+            closeBtn.style.justifyContent = 'center';
+            closeBtn.style.marginLeft = '4px';
             closeBtn.onclick = function(e) {
                 e.stopPropagation();
                 fixedFiles.splice(idx, 1);
                 window._fixedFiles = fixedFiles;
-                vscode.postMessage({ type: 'removeContextFile', value: name }); // 新增这一行
-                // 如果当前currentFile为空，则尝试恢复为最后一个被删除的文件名（可选优化，实际可不恢复）
-                // window._currentFile = '';
-                // 重新渲染
+                vscode.postMessage({ type: 'removeContextFile', value: name });
                 window.dispatchEvent(new MessageEvent('message', { data: { type: 'contextFilename', value: window._currentFile || '' } }));
             };
             tag.appendChild(closeBtn);
@@ -284,12 +292,22 @@ window.addEventListener('message', event => {
             const plusBtn = document.createElement('button');
             plusBtn.className = 'context-tag-close';
             plusBtn.innerHTML = '+';
+            plusBtn.style.width = '22px';
+            plusBtn.style.height = '22px';
+            plusBtn.style.fontSize = '18px';
+            plusBtn.style.lineHeight = '22px';
+            plusBtn.style.border = 'none';
+            plusBtn.style.background = 'transparent';
+            plusBtn.style.cursor = 'pointer';
+            plusBtn.style.display = 'inline-flex';
+            plusBtn.style.alignItems = 'center';
+            plusBtn.style.justifyContent = 'center';
+            plusBtn.style.marginLeft = '4px';
             plusBtn.onclick = function(e) {
                 e.stopPropagation();
                 if (!fixedFiles.includes(currentFile)) { fixedFiles.push(currentFile); }
                 window._fixedFiles = fixedFiles;
                 window._currentFile = '';
-                // 重新渲染
                 window.dispatchEvent(new MessageEvent('message', { data: { type: 'contextFilename', value: '' } }));
             };
             tag.appendChild(plusBtn);
