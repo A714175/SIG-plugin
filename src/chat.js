@@ -307,6 +307,8 @@ window.addEventListener('message', event => {
                 e.stopPropagation();
                 if (!fixedFiles.includes(currentFile)) { fixedFiles.push(currentFile); }
                 window._fixedFiles = fixedFiles;
+                // 通知后端将当前活动文件内容加入已固定上下文文件列表
+                vscode.postMessage({ type: 'fixCurrentContextFile', value: currentFile });
                 window._currentFile = '';
                 window.dispatchEvent(new MessageEvent('message', { data: { type: 'contextFilename', value: '' } }));
             };

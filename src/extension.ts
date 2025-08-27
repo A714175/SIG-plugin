@@ -25,6 +25,16 @@ export function activate(context: vscode.ExtensionContext) {
 				const editor = vscode.window.activeTextEditor;
 				const filename = editor ? path.basename(editor.document.fileName) : '';
 				panel.webview.postMessage({ type: 'contextFilename', value: filename });
+				// 记录当前活动文件内容
+				if (editor) {
+					(panel as any)._filgptCurrentFile = {
+						name: path.basename(editor.document.fileName),
+						path: editor.document.fileName,
+						content: editor.document.getText()
+					};
+				} else {
+					(panel as any)._filgptCurrentFile = undefined;
+				}
 			};
 			context.subscriptions.push(
 				vscode.window.onDidChangeActiveTextEditor(updateContextFilename),
@@ -39,6 +49,14 @@ export function activate(context: vscode.ExtensionContext) {
 				})
 			);
 			panel.webview.onDidReceiveMessage(async message => {
+				// 固定当前活动文件到上下文文件列表
+				if (message.type === 'fixCurrentContextFile') {
+					const currentFile = (panel as any)._filgptCurrentFile;
+					const contextFiles = (panel as any)._filgptContextFiles || [];
+					if (currentFile && !contextFiles.some((f: any) => f.path === currentFile.path)) {
+						(panel as any)._filgptContextFiles = [currentFile, ...contextFiles];
+					}
+				}
 				if (message.type === 'showInfo') {
 					vscode.window.showInformationMessage(message.value);
 				}
