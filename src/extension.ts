@@ -149,6 +149,10 @@ export function activate(context: vscode.ExtensionContext) {
 								userInput += `\n\n以下是选中的文件内容：\n${contextText}`;
 							}
 							// 合并上下文文件内容-end
+							// 新增 requestId 机制
+							const panelAny = panel as any;
+							const requestId = Date.now().toString() + Math.random().toString(36).slice(2);
+							panelAny._filgptCurrentRequestId = requestId;
 							const res = await fetch('http://localhost:8080/api/innersource/generate', {
 								method: 'POST',
 								headers: {
@@ -157,6 +161,11 @@ export function activate(context: vscode.ExtensionContext) {
 								// body: JSON.stringify({ userInput: message.value })
 								body: JSON.stringify({ userInput })
 							});
+							// 判断请求是否已被 stop
+							if (panelAny._filgptCurrentRequestId !== requestId) {
+								// 已被 stop，不展示结果
+								return;
+							}
 							const data: any = await res.json();
 							let result = '';
 							if (data.text) { result += data.text + '\n\n'; }
@@ -328,6 +337,8 @@ export function activate(context: vscode.ExtensionContext) {
 				if (message.type === 'stopGenerate') {
 					const panelAny = panel as any;
 					if (panelAny._filgptAbortController) { panelAny._filgptAbortController.abort(); }
+					// 清空当前 requestId，后续结果不再展示
+					panelAny._filgptCurrentRequestId = null;
 					panel.webview.postMessage({ type: 'stopGenerateAck' });
 				}
 				if (message.type === 'applyCode') {
