@@ -161,7 +161,8 @@ export function activate(context: vscode.ExtensionContext) {
 							let result = '';
 							if (data.text) { result += data.text + '\n\n'; }
 							if (data.code) { result += '```\n' + data.code + '\n```'; }
-							panel.webview.postMessage({ type: 'apiResult', value: result });
+							// 新增 fileName 字段传递
+							panel.webview.postMessage({ type: 'apiResult', value: result, fileName: data.fileName });
 						} catch (err) {
 							panel.webview.postMessage({ type: 'apiResult', value: 'FILGPT接口请求失败: ' + err });
 						}
@@ -344,10 +345,11 @@ export function activate(context: vscode.ExtensionContext) {
 					vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
 				}
 				if (message.type === 'downloadCode') {
-					// 让用户选择保存路径
+					// 优先使用 fileName 作为默认文件名
+					const fileName = message.fileName || 'code.txt';
 					const uri = await vscode.window.showSaveDialog({
-						defaultUri: vscode.Uri.file('code.txt'),
-						filters: { 'Code': ['txt', 'js', 'ts', 'py', 'java', 'cpp'] }
+						defaultUri: vscode.Uri.file(fileName),
+						filters: { 'Code': ['txt', 'js', 'ts', 'py', 'java', 'cpp', 'tf'] }
 					});
 					if (uri) {
 						await vscode.workspace.fs.writeFile(uri, Buffer.from(message.value, 'utf8'));

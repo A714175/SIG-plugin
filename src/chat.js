@@ -209,6 +209,12 @@ window.addEventListener('message', event => {
     if (msg.type === 'apiResult') {
         hideGenerating();
         hidePauseBtn();
+        // 缓存 fileName 到 window 变量
+        if (msg.fileName) {
+            window._lastApiFileName = msg.fileName;
+        } else {
+            window._lastApiFileName = undefined;
+        }
         appendBubble(msg.value, 'bot');
         messages.push({ role: 'assistant', content: msg.value });
         setWaiting(false);
@@ -481,7 +487,8 @@ function appendBubble(text, who) {
             }
             downloadBtn.onclick = function() {
                 const code = bubble.querySelector('pre code').textContent;
-                vscode.postMessage({ type: 'downloadCode', value: code });
+                // 带上 fileName 字段
+                vscode.postMessage({ type: 'downloadCode', value: code, fileName: window._lastApiFileName });
             };
             bubble.appendChild(downloadBtn);
         }
