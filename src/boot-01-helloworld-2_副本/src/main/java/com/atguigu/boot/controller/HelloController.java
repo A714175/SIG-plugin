@@ -1,0 +1,123 @@
+package com.atguigu.boot.controller;
+import com.atguigu.boot.bean.Person;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.http.MediaType;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Map;
+@RestController
+@Slf4j
+public class HelloController {
+
+    @Autowired
+    Person person;
+
+    @RequestMapping("/hello")
+    public String Hello(@RequestParam("name") String name){
+        System.out.println("请求进来了"+name);
+        return "hello world!"+name;
+    }
+    
+    @RequestMapping("/person")
+    public Person person(){
+        log.info("请求进来了....");
+
+
+        String userName = person.getUserName();
+        System.out.println(userName);
+        return person;
+    }
+    
+    /**
+     * POST /streamNumbers
+     * 请求体: {"userInput":100}
+     * 流式输出: 1,2,3,...100
+     */
+    @PostMapping(value = "/streamNumbers", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public void streamNumbers(@RequestBody Map<String, Integer> payload, HttpServletResponse response) throws IOException {
+        Integer userInput = payload.get("userInput");
+        response.setContentType("text/plain;charset=UTF-8");
+        if (userInput != null && userInput > 0) {
+            for (int i = 1; i <= userInput; i++) {
+                response.getWriter().write(String.valueOf(i));
+                if (i < userInput) {
+                    response.getWriter().write(",");
+                }
+                response.getWriter().flush();
+            }
+        } else {
+            response.getWriter().write("Invalid input");
+        }
+        response.getWriter().flush();
+    }
+
+
+
+    @PostMapping(value = "/api/innersource/generate", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public void gengrate(@RequestBody Map<String, Object> payload, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        Object userInputObj = payload.get("userInput");
+        String result;
+        if (userInputObj != null && "generate an EC2 instance using the fil innersource".equals(userInputObj.toString())) {
+            String text = "To generate an EC2 instance using Fidelity's innersource repositories, we will leverage the available repository TAPP182535-terraform-aws-ec2. This repository is designed to facilitate the creation and management of EC2 instances within AWS environments. We will adhere to the core principles outlined, such as using resource tagging consistently and following the least-privilege principle for IAM permissions. We will reference the module using the specified format and only use attributes documented in the README.md examples provided with the repository. The Terraform configuration will be organized into multiple resource files to ensure clarity and maintainability.";
+            String codeLines2 = 
+                "module \"ec2_instance\" { \n" + //
+                " source = \"registry.pdeeinnersourceiac.aws.ukfileid/ficelity/terraform-aws-ec2/aws\" \n" + //
+                " version = \"-> 1.0.0\" \n" + //
+                " \n" + //
+                " # Example parameters based on the module documentation\n" + //
+                " instance_type = \"t2.micro\" \n" + //
+                " ami_id = \"ami-@abcdef1234567890\" \n" + //
+                " key_name = \"my-key\" \n" + //
+                " \n" + //
+                " tags = { \n" + //
+                " Name = \"example-ec2-instance\" \n" + //
+                " Environment = \"production\" \n" + //
+                " } \n" + //
+                "} \n" + //
+                " \n" + //
+                "# Ensure all resources are tagged consistently\n" + //
+                "locals { \n" + //
+                " tags = { \n" + //
+                " Application = \"MyApp\" \n" + //
+                " Environment = \"Production\" \n" + //
+                " } \n" + //
+                "}";
+            String fileName = "fil-account-bootstrap.tf";
+            String codeJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(codeLines2);
+            String fileNamestr = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(fileName);
+            result = String.format("{\"text\":\"%s\",\"code\":%s,\"fileName\":%s}", text, codeJson,fileNamestr);
+        } else {
+            StringBuilder codeBuilder = new StringBuilder();
+            if (userInputObj != null) {
+                try {
+                    int userInput = Integer.parseInt(userInputObj.toString());
+                    for (int i = 1; i <= userInput; i++) {
+                        codeBuilder.append(i);
+                        if (i < userInput) codeBuilder.append(",");
+                    }
+                } catch (NumberFormatException e) {
+                    codeBuilder.append(userInputObj.toString());
+                }
+            } else {
+                codeBuilder.append("null");
+            }
+            result = String.format("{\"text\":\"hello\",\"code\":\"%s\"}", codeBuilder.toString());
+        }
+        try {
+            Thread.sleep(5000);
+            response.getWriter().write(result);
+            response.getWriter().flush();
+        } catch (Exception e) {
+            response.getWriter().write("{\"error\":\"" + e.getMessage() + "\"}");
+            response.getWriter().flush();
+        }
+    }
+}
