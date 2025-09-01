@@ -402,7 +402,23 @@ function appendBubble(text, who) {
     } else {
         try {
             if (typeof marked !== 'undefined') {
-                div.innerHTML = (marked.parse ? marked.parse(text) : marked(text));
+                // div.innerHTML = (marked.parse ? marked.parse(text) : marked(text));
+                //  div.innerHTML = `<div class="copilot-bubble">${marked.parse ? marked.parse(text) : marked(text)}</div>`;
+                // 1.用marked渲染
+                let html = marked.parse ? marked.parse(text) : marked(text);
+
+                // 2.用DOMParser解析
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html,'text/html');
+                // 3.遍历所有<pre><code>
+                doc.querySelectorAll('pre').forEach(pre=>{
+                    const bubble = doc.createElement('div');
+                    bubble.className = 'copilot-bubble';
+                    pre.parentElement.replaceChild(bubble, pre);
+                    bubble.appendChild(pre);
+                });
+                // 4.设置 innerHtml
+                div.innerHTML = doc.body.innerHTML;
             } else {
                 const parts = text.split(/(```[\s\S]*?```)/g);
                 let html = '', codeIndex = 0;
