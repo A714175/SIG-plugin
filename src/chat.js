@@ -40,6 +40,8 @@ window.onload = () => {
         select.style.webkitAppearance = 'none';
         select.style.MozAppearance = 'none';
         select.style.position = 'relative';
+        select.style.textAlign = 'right';
+        select.style.paddingRight = '22px';
         const arrow = document.createElement('span');
         arrow.innerHTML = '&#9662;';
         arrow.style.position = 'absolute';
@@ -66,6 +68,18 @@ window.onload = () => {
         wrapper.appendChild(select);
         wrapper.appendChild(arrow);
         inputActions.insertBefore(wrapper, inputActions.firstChild);
+
+        // ===新增：监听模型切换，控制“分析整个项目”按钮显示===
+        const analyzeProjectBtn =document.getElementById('analyze-project');
+        select.addEventListener('change', function() {
+            if (this.value === 'filgpt') {
+                analyzeProjectBtn.style.display = 'none';
+            } else {
+                analyzeProjectBtn.style.display = '';
+            }
+        });
+        // 初始化时也执行一次
+        select.dispatchEvent(new Event('change'));
     }
 };
 
@@ -119,6 +133,13 @@ input.addEventListener('input', function() {
 });
 
 function showPauseBtn() {
+    // TODO 因为filgpt接口不支持暂停，暂时隐藏暂停按钮
+    const modelSelect = document.getElementById('model-select');
+    const model = modelSelect ? modelSelect.value : 'filgpt';
+    if (model === 'filgpt') { 
+        hidePauseBtn();
+        return; 
+    }
     if (pauseBtn) { return; }
     const inputActions = document.getElementById('input-actions');
     pauseBtn = document.createElement('button');
@@ -128,6 +149,18 @@ function showPauseBtn() {
     inputActions.insertBefore(pauseBtn, stopBtn);
     setPauseBtnState('pause');
 }
+
+// 监听模型切换，动态隐藏/显示暂停按钮
+document.addEventListener('DOMContentLoaded', ()=>{
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        modelSelect.addEventListener('change', ()=> {
+            if(modelSelect.value === 'filgpt') {
+                hidePauseBtn();
+            }
+        });
+    }
+});
 
 function setPauseBtnState(state) {
     if (!pauseBtn) { return; }
@@ -509,6 +542,16 @@ function appendBubble(text, who) {
             bubble.appendChild(downloadBtn);
         }
     });
+    // ===新增分割符 ===
+    if (who === 'bot') {
+       const divider = document.createElement('div');
+       divider.style.borderTop = '1px dashed #444';
+       divider.style.margin = '18px 0 12px 0';
+       divider.style.height = '0';
+       divider.style.width = '100%';
+       divider.setAttribute('aria-hidden', 'true');
+       chat.appendChild(divider);
+    }
 }
 
 function showGenerating() {

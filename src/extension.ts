@@ -153,12 +153,9 @@ export function activate(context: vscode.ExtensionContext) {
 							const panelAny = panel as any;
 							const requestId = Date.now().toString() + Math.random().toString(36).slice(2);
 							panelAny._filgptCurrentRequestId = requestId;
-							const res = await fetch('http://localhost:8080/api/innersource/generate', {
+							const res = await fetch('http://easycoding.k8s.npk8snp1.npaws.ukfilcld/api/innersource/generate', {
 								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json'
-								},
-								// body: JSON.stringify({ userInput: message.value })
+								headers: {'Content-Type': 'application/json'},
 								body: JSON.stringify({ userInput })
 							});
 							// 判断请求是否已被 stop
@@ -212,11 +209,9 @@ export function activate(context: vscode.ExtensionContext) {
 					} else if (model === 'filgpt') {
 						try {
 							const fetch = (await import('node-fetch')).default;
-							const res = await fetch('http://localhost:8080/api/innersource/generate', {
+							const res = await fetch('http://easycoding.k8s.npk8snp1.npaws.ukfilcld/api/innersource/generate', {
 								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json'
-								},
+								headers: {'Content-Type': 'application/json'},
 								body: JSON.stringify({ userInput: `请帮我分析以下代码并给出修改建议：\n\n${codeToAnalyze}` })
 							});
 							const data: any = await res.json();
@@ -285,14 +280,21 @@ export function activate(context: vscode.ExtensionContext) {
 						}
 						try {
 							const fetch = (await import('node-fetch')).default;
-							const res = await fetch('http://localhost:8080/api/innersource/generate', {
+							const res = await fetch('http://easycoding.k8s.npk8snp1.npaws.ukfilcld/api/innersource/generate', {
 								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json'
-								},
+								headers: {'Content-Type': 'application/json'},
 								body: JSON.stringify({ userInput: `请分析以下项目代码并给出修改建议：\n\n${allCode}` })
 							});
-							const data: any = await res.json();
+							// const data: any = await res.json();
+							let data: any;
+							if (res.ok) {
+								data = await res.json();
+							} else {
+								//失败时尝试读取文本内容
+								const text = await res.text();
+								panel.webview.postMessage({type: 'apiResult', value: 'FILGPT接口请求失败: ' + text});
+								return;	
+							}
 							let result = '';
 							if (data.text) { result += data.text + '\n\n'; }
 							if (data.suggestion) { result += data.suggestion; }

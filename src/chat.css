@@ -114,7 +114,7 @@ body {
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
-    padding-bottom: 150px; /* 让内容不会被输入区遮挡，数值可根据实际输入区高度调整 */
+    padding-bottom: 200px; /* 让内容不会被输入区遮挡，数值可根据实际输入区高度调整 */
 }
 .bubble {
     display: inline-block;
@@ -437,4 +437,8 @@ button.loading .icon-loading {
 }
 .apply-code-btn:hover {
     background: #4f7cff;
+}
+#model-select {
+    text-align: right;
+    padding: 22px;
 }
