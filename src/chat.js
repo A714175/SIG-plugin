@@ -484,26 +484,32 @@ function appendBubble(text, who) {
     }
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
-    // 动态插入 copy 按钮
+    // 按钮区域插入到代码块右上角，使用icon
     div.querySelectorAll('.copilot-bubble').forEach((bubble, idx) => {
-        if (!bubble.querySelector('.copy-code-btn')) {
+        if (!bubble.querySelector('.code-action-bar')) {
+            const actionBar = document.createElement('div');
+            actionBar.className = 'code-action-bar';
+            actionBar.style.position = 'absolute';
+            actionBar.style.top = '8px';
+            actionBar.style.right = '12px';
+            actionBar.style.display = 'flex';
+            actionBar.style.gap = '8px';
+            actionBar.style.zIndex = '2';
+
+            // copy icon button
             const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-code-btn';
-            copyBtn.textContent = 'copy';
-            copyBtn.setAttribute('data-code-index', idx);
-            copyBtn.style.marginLeft = '8px';
+            copyBtn.className = 'code-action-btn';
+            copyBtn.title = '复制代码';
+            copyBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="5" y="5" width="10" height="12" rx="2" stroke="#6a93ff" stroke-width="2"/><rect x="3" y="3" width="10" height="12" rx="2" fill="none" stroke="#6a93ff" stroke-width="1"/></svg>`;
             copyBtn.onclick = function() {
                 const code = bubble.querySelector('pre code').textContent;
-                // 尝试使用 Clipboard API 复制到剪贴板
                 if (navigator && navigator.clipboard) {
                     navigator.clipboard.writeText(code).then(() => {
-                        // 可选：提示复制成功
                         vscode.postMessage({ type: 'showInfo', value: '代码已复制到剪贴板' });
                     }).catch(() => {
                         vscode.postMessage({ type: 'showWarning', value: '复制失败，请手动复制' });
                     });
                 } else {
-                    // 兼容性处理：创建临时 textarea
                     const textarea = document.createElement('textarea');
                     textarea.value = code;
                     document.body.appendChild(textarea);
@@ -517,54 +523,33 @@ function appendBubble(text, who) {
                     document.body.removeChild(textarea);
                 }
             };
-            bubble.appendChild(copyBtn);
-        }
-    });
-    // 已在动态插入 download 按钮时绑定事件，无需重复绑定
-    // 新增 download 按钮，UI 与 copy 按钮一致
-    div.querySelectorAll('.copilot-bubble').forEach(bubble => {
-        // 检查是否已存在 download 按钮，避免重复添加
-        if (!bubble.querySelector('.download-code-btn')) {
+            actionBar.appendChild(copyBtn);
+
+            // download icon button
             const downloadBtn = document.createElement('button');
-            downloadBtn.className = 'download-code-btn';
-            downloadBtn.textContent = 'download';
-            downloadBtn.style.marginLeft = '8px';
-            // 复制 copy 按钮的样式
-            const copyBtn = bubble.querySelector('.copy-code-btn');
-            if (copyBtn) {
-                downloadBtn.style.cssText += copyBtn.style.cssText;
-            }
+            downloadBtn.className = 'code-action-btn';
+            downloadBtn.title = '下载代码';
+            downloadBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 4v8m0 0l-3-3m3 3l3-3" stroke="#6a93ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="16" width="12" height="2" rx="1" fill="#6a93ff"/></svg>`;
             downloadBtn.onclick = function() {
                 const code = bubble.querySelector('pre code').textContent;
-                // 带上 fileName 字段
                 vscode.postMessage({ type: 'downloadCode', value: code, fileName: window._lastApiFileName });
             };
-            bubble.appendChild(downloadBtn);
-        }
-    });
-    // 新增 apply 按钮，UI 与 copy 按钮一致
-    div.querySelectorAll('.copilot-bubble').forEach(bubble => {
-        if (!bubble.querySelector('.apply-code-btn')) {
+            actionBar.appendChild(downloadBtn);
+
+            // apply icon button
             const applyBtn = document.createElement('button');
-            applyBtn.className = 'apply-code-btn';
-            applyBtn.textContent = 'apply';
-            applyBtn.style.marginLeft = '8px';
-            // 复制 copy 按钮的样式
-            const copyBtn = bubble.querySelector('.copy-code-btn');
-            if (copyBtn) {
-                applyBtn.style.cssText += copyBtn.style.cssText;
-            }
+            applyBtn.className = 'code-action-btn';
+            applyBtn.title = '插入到编辑器';
+            applyBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 10h10M10 5v10" stroke="#6a93ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
             applyBtn.onclick = function() {
                 const code = bubble.querySelector('pre code').textContent;
                 vscode.postMessage({ type: 'applyCode', value: code });
             };
-            // 插入到 downloadBtn 之后
-            const downloadBtn = bubble.querySelector('.download-code-btn');
-            if (downloadBtn && downloadBtn.nextSibling) {
-                bubble.insertBefore(applyBtn, downloadBtn.nextSibling);
-            } else {
-                bubble.appendChild(applyBtn);
-            }
+            actionBar.appendChild(applyBtn);
+
+            // 让 bubble 相对定位，actionBar 绝对定位
+            bubble.style.position = 'relative';
+            bubble.appendChild(actionBar);
         }
     });
     // ===新增分割符 ===
