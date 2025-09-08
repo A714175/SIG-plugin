@@ -486,9 +486,9 @@ function appendBubble(text, who) {
     chat.scrollTop = chat.scrollHeight;
     // 动态插入 copy 按钮
     div.querySelectorAll('.copilot-bubble').forEach((bubble, idx) => {
-        if (!bubble.querySelector('.apply-code-btn')) {
+        if (!bubble.querySelector('.copy-code-btn')) {
             const copyBtn = document.createElement('button');
-            copyBtn.className = 'apply-code-btn';
+            copyBtn.className = 'copy-code-btn';
             copyBtn.textContent = 'copy';
             copyBtn.setAttribute('data-code-index', idx);
             copyBtn.style.marginLeft = '8px';
@@ -530,7 +530,7 @@ function appendBubble(text, who) {
             downloadBtn.textContent = 'download';
             downloadBtn.style.marginLeft = '8px';
             // 复制 copy 按钮的样式
-            const copyBtn = bubble.querySelector('.apply-code-btn');
+            const copyBtn = bubble.querySelector('.copy-code-btn');
             if (copyBtn) {
                 downloadBtn.style.cssText += copyBtn.style.cssText;
             }
@@ -540,6 +540,31 @@ function appendBubble(text, who) {
                 vscode.postMessage({ type: 'downloadCode', value: code, fileName: window._lastApiFileName });
             };
             bubble.appendChild(downloadBtn);
+        }
+    });
+    // 新增 apply 按钮，UI 与 copy 按钮一致
+    div.querySelectorAll('.copilot-bubble').forEach(bubble => {
+        if (!bubble.querySelector('.apply-code-btn')) {
+            const applyBtn = document.createElement('button');
+            applyBtn.className = 'apply-code-btn';
+            applyBtn.textContent = 'apply';
+            applyBtn.style.marginLeft = '8px';
+            // 复制 copy 按钮的样式
+            const copyBtn = bubble.querySelector('.copy-code-btn');
+            if (copyBtn) {
+                applyBtn.style.cssText += copyBtn.style.cssText;
+            }
+            applyBtn.onclick = function() {
+                const code = bubble.querySelector('pre code').textContent;
+                vscode.postMessage({ type: 'applyCode', value: code });
+            };
+            // 插入到 downloadBtn 之后
+            const downloadBtn = bubble.querySelector('.download-code-btn');
+            if (downloadBtn && downloadBtn.nextSibling) {
+                bubble.insertBefore(applyBtn, downloadBtn.nextSibling);
+            } else {
+                bubble.appendChild(applyBtn);
+            }
         }
     });
     // ===新增分割符 ===

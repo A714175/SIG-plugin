@@ -413,7 +413,7 @@ button.loading .icon-loading {
 #stop svg, #pause svg {
     display: block;
 }
-.apply-code-btn {
+.copy-code-btn {
     margin-top: 8px;
     background: #6a93ff;
     color: #fff;
@@ -425,6 +425,21 @@ button.loading .icon-loading {
     transition: background 0.2s;
 }
 .download-code-btn {
+    margin-top: 8px;
+    background: #6a93ff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.copy-code-btn:hover {
+    background: #4f7cff;
+}
+/* 让 apply 按钮和 copy/download 完全一致 */
+.apply-code-btn {
     margin-top: 8px;
     background: #6a93ff;
     color: #fff;
